@@ -1,0 +1,23 @@
+// ============================================
+// Model: ProviderBreak
+// Deskripsi: Jam Istirahat / Libur Khusus
+// ============================================
+
+model ProviderBreak {
+  id          String   @id @default(uuid())
+  providerId  String   @map("provider_id")
+  dayOfWeek   Int?     @map("day_of_week")
+  breakStart  DateTime? @map("break_start") @db.Time
+  breakEnd    DateTime? @map("break_end") @db.Time
+  dateStart   DateTime? @map("date_start") @db.Date
+  dateEnd     DateTime? @map("date_end") @db.Date
+  reason      String?  @db.VarChar(255)
+  isRecurring Boolean  @default(false) @map("is_recurring")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relations
+  provider ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+  @@map("provider_breaks")
+}

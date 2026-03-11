@@ -1,0 +1,41 @@
+// ============================================
+// Model: Booking
+// Deskripsi: Tabel Inti Booking
+// ============================================
+
+model Booking {
+  id                String        @id @default(uuid())
+  tenantId          String        @map("tenant_id")
+  customerId        String        @map("customer_id")
+  providerId        String        @map("provider_id")
+  serviceId         String        @map("service_id")
+  startTime         DateTime      @map("start_time")
+  endTime           DateTime      @map("end_time")
+  status            BookingStatus @default(PENDING)
+  totalPrice        Decimal       @map("total_price") @db.Decimal(12, 2)
+  currency          String        @default("IDR") @db.VarChar(3)
+  notes             String?       @db.Text
+  cancellationReason String?      @map("cancellation_reason") @db.Text
+  cancelledBy       String?       @map("cancelled_by")
+  cancelledAt       DateTime?     @map("cancelled_at")
+  version           Int           @default(1)
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  tenant    Tenant            @relation(fields: [tenantId], references: [id])
+  customer  User              @relation(fields: [customerId], references: [id])
+  provider  ProviderProfile   @relation(fields: [providerId], references: [id])
+  service   Service           @relation(fields: [serviceId], references: [id])
+  cancelledByUser User?       @relation("CancelledBookings", fields: [cancelledBy], references: [id])
+  statusLogs BookingStatusLog[]
+  payments   Payment[]
+  notifications Notification[]
+
+  @@index([tenantId])
+  @@index([customerId])
+  @@index([providerId, startTime])
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@map("bookings")
+}

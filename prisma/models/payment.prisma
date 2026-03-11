@@ -1,0 +1,29 @@
+// ============================================
+// Model: Payment
+// Deskripsi: Tracking Pembayaran
+// ============================================
+
+model Payment {
+  id            String        @id @default(uuid())
+  bookingId     String        @map("booking_id")
+  tenantId      String        @map("tenant_id")
+  amount        Decimal       @db.Decimal(12, 2)
+  currency      String        @default("IDR") @db.VarChar(3)
+  paymentMethod PaymentMethod @map("payment_method")
+  status        PaymentStatus @default(PENDING)
+  externalRef   String?       @map("external_ref") @db.VarChar(255)
+  paidAt        DateTime?     @map("paid_at")
+  refundedAt    DateTime?     @map("refunded_at")
+  refundAmount  Decimal?      @map("refund_amount") @db.Decimal(12, 2)
+  metadata      Json          @default("{}")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  booking Booking @relation(fields: [bookingId], references: [id])
+  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+
+  @@index([bookingId])
+  @@index([tenantId, status])
+  @@map("payments")
+}

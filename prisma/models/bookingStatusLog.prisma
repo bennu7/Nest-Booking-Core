@@ -1,0 +1,22 @@
+// ============================================
+// Model: BookingStatusLog
+// Deskripsi: Audit Trail Perubahan Status
+// ============================================
+
+model BookingStatusLog {
+  id             String        @id @default(uuid())
+  bookingId      String        @map("booking_id")
+  previousStatus BookingStatus? @map("previous_status")
+  newStatus      BookingStatus @map("new_status")
+  changedBy      String?       @map("changed_by")
+  changeReason   String?       @map("change_reason") @db.Text
+  metadata       Json          @default("{}")
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  // Relations
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([createdAt])
+  @@map("booking_status_logs")
+}

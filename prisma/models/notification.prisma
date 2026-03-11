@@ -1,0 +1,29 @@
+// ============================================
+// Model: Notification
+// Deskripsi: Log Notifikasi
+// ============================================
+
+model Notification {
+  id         String             @id @default(uuid())
+  tenantId   String             @map("tenant_id")
+  userId     String             @map("user_id")
+  bookingId  String?            @map("booking_id")
+  channel    NotificationChannel
+  title      String             @db.VarChar(255)
+  body       String             @db.Text
+  status     NotificationStatus @default(QUEUED)
+  sentAt     DateTime?          @map("sent_at")
+  readAt     DateTime?          @map("read_at")
+  errorMessage String?          @map("error_message") @db.Text
+  retryCount Int                @default(0) @map("retry_count")
+  createdAt  DateTime           @default(now()) @map("created_at")
+
+  // Relations
+  tenant  Tenant   @relation(fields: [tenantId], references: [id])
+  user    User     @relation(fields: [userId], references: [id])
+  booking Booking? @relation(fields: [bookingId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([userId])
+  @@map("notifications")
+}
