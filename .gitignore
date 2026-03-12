@@ -2,6 +2,8 @@ node_modules/
 src/generated
 dist/
 
-booking_engine_schema.md
-CASE.md
+.env
 .DS_Store
+
+CASE.md
+booking_engine_schema.md

@@ -3,8 +3,9 @@
 // Models are split into separate files in the models/ directory
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated"
+  provider     = "prisma-client"
+  output       = "../src/generated"
+  moduleFormat = "cjs"
 }
 
 datasource db {
