@@ -1,4 +1,9 @@
-import { Controller, Get, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ApiResponse } from 'src/common/dto/api-response.dto';
 import { HealthService } from './health.service';
 
@@ -16,9 +21,7 @@ export class HealthController {
     const isReady = await this.healthSvc.isDatabaseReady();
 
     if (!isReady)
-      return new ApiResponse(503, 'Database Not Connected', {
-        status: 'not_ready',
-      });
+      throw new ServiceUnavailableException('Database Not Connected');
 
     return new ApiResponse(HttpStatus.OK, 'Service is ready', {
       status: 'ready',
