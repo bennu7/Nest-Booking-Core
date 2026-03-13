@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import appConfig from './config/app.config';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -7,6 +8,14 @@ import { ResponseFormatterInterceptor } from './common/interceptors/response-for
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const { port, nodeName } = appConfig();
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
 
   app.useGlobalInterceptors(new ResponseFormatterInterceptor());
 
@@ -17,4 +26,8 @@ async function bootstrap() {
   });
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+  console.error(`\t ‼️ FAILED RUNNING ON BOOTSTRAP`);
+  console.error(err);
+  process.exit(1);
+});

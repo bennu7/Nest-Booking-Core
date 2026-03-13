@@ -14,6 +14,7 @@ import * as Joi from 'joi';
         JWT_EXPIRES_IN: Joi.string().required(),
         JWT_SECRET_REFRESH: Joi.string().required(),
         JWT_SECRET_REFRESH_EXPIRES_IN: Joi.string().required(),
+        NODE_ENV: Joi.string().required(),
       }),
     }),
   ],

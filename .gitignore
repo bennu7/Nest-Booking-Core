@@ -6,4 +6,5 @@ dist/
 .DS_Store
 
 CASE.md
+AGENT.md
 booking_engine_schema.md
