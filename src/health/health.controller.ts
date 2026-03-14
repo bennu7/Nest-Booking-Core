@@ -6,11 +6,13 @@ import {
 } from '@nestjs/common';
 import { ApiResponse } from 'src/common/dto/api-response.dto';
 import { HealthService } from './health.service';
+import { Public } from 'src/common/decorators/public.decorator';
 
 @Controller('health')
 export class HealthController {
   constructor(private healthSvc: HealthService) {}
 
+  @Public()
   @Get()
   checkHealth() {
     return new ApiResponse({
@@ -20,6 +22,7 @@ export class HealthController {
     });
   }
 
+  @Public()
   @Get('ready')
   async checkReady() {
     const isReady = await this.healthSvc.isDatabaseReady();
