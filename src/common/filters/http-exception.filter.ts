@@ -11,7 +11,6 @@ import { ErrorResponse } from '../dto/api-response.dto';
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   catch(exception: any, host: ArgumentsHost) {
-    // throw new Error('Method not implemented.');
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
 
@@ -25,7 +24,11 @@ export class HttpExceptionFilter implements ExceptionFilter {
       error = exception.name;
     }
 
-    const errorResponse = new ErrorResponse(code, message, error);
+    const errorResponse = new ErrorResponse({
+      code,
+      message,
+      error,
+    });
 
     response.status(code).json(errorResponse);
   }

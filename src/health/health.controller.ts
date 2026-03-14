@@ -13,7 +13,11 @@ export class HealthController {
 
   @Get()
   checkHealth() {
-    return new ApiResponse(HttpStatus.OK, 'SUCCESS', null);
+    return new ApiResponse({
+      code: HttpStatus.OK,
+      message: 'Success',
+      data: null,
+    });
   }
 
   @Get('ready')
@@ -23,8 +27,12 @@ export class HealthController {
     if (!isReady)
       throw new ServiceUnavailableException('Database Not Connected');
 
-    return new ApiResponse(HttpStatus.OK, 'Service is ready', {
-      status: 'ready',
+    return new ApiResponse({
+      code: HttpStatus.OK,
+      message: 'Service is ready',
+      data: {
+        status: 'ready',
+      },
     });
   }
 }
