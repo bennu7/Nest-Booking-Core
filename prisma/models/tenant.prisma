@@ -4,28 +4,28 @@
 // ============================================
 
 model Tenant {
-  id           String   @id @default(uuid())
-  name         String   @db.VarChar(255)
-  slug         String   @unique @db.VarChar(100)
-  email        String   @db.VarChar(255)
-  phone        String?  @db.VarChar(20)
-  address      String?  @db.Text
-  timezone     String   @default("Asia/Jakarta") @db.VarChar(50)
-  logoUrl      String?  @db.Text
-  isActive     Boolean  @default(true)
-  settings     Json     @default("{}")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(uuid())
+  name      String   @db.VarChar(255)
+  slug      String   @unique @db.VarChar(100)
+  email     String   @db.VarChar(255)
+  phone     String?  @db.VarChar(20)
+  address   String?  @db.Text
+  timezone  String   @default("Asia/Jakarta") @db.VarChar(50)
+  logoUrl   String?  @db.Text
+  isActive  Boolean  @default(true)
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  users                  User[]
-  serviceCategories      ServiceCategory[]
-  cancellationPolicies   CancellationPolicy[]
-  bookings               Booking[]
-  payments               Payment[]
-  notifications          Notification[]
-  slotHolds              SlotHold[]
-  providerProfiles       ProviderProfile[]
+  users                User[]
+  serviceCategories    ServiceCategory[]
+  cancellationPolicies CancellationPolicy[]
+  bookings             Booking[]
+  payments             Payment[]
+  notifications        Notification[]
+  slotHolds            SlotHold[]
+  providerProfiles     ProviderProfile[]
 
   @@map("tenants")
 }

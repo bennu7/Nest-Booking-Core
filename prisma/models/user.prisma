@@ -20,14 +20,14 @@ model User {
   updatedAt      DateTime     @updatedAt @map("updated_at")
 
   // Relations
-  tenant         Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  refreshTokens  RefreshToken[]
-  providerProfile ProviderProfile?
-  bookings       Booking[]
-  notifications  Notification[]
-  slotHolds      SlotHold[]
-  cancelledBookings Booking[] @relation("CancelledBookings")
-  idempotencyKeys IdempotencyKey[]
+  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  refreshTokens     RefreshToken[]
+  providerProfile   ProviderProfile?
+  bookings          Booking[]
+  notifications     Notification[]
+  slotHolds         SlotHold[]
+  cancelledBookings Booking[]        @relation("CancelledBookings")
+  idempotencyKeys   IdempotencyKey[]
 
   @@unique([tenantId, email])
   @@index([tenantId])

@@ -19,9 +19,9 @@ model Service {
   updatedAt       DateTime @updatedAt @map("updated_at")
 
   // Relations
-  provider ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  category ServiceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  bookings Booking[]
+  provider  ProviderProfile  @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  category  ServiceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  bookings  Booking[]
   slotHolds SlotHold[]
 
   @@index([providerId])

@@ -4,16 +4,16 @@
 // ============================================
 
 model SlotHold {
-  id         String   @id @default(uuid())
-  tenantId   String   @map("tenant_id")
-  providerId String   @map("provider_id")
-  customerId String   @map("customer_id")
-  serviceId  String   @map("service_id")
-  startTime  DateTime @map("start_time")
-  endTime    DateTime @map("end_time")
-  expiresAt  DateTime @map("expires_at")
-  isConverted Boolean @default(false) @map("is_converted")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id          String   @id @default(uuid())
+  tenantId    String   @map("tenant_id")
+  providerId  String   @map("provider_id")
+  customerId  String   @map("customer_id")
+  serviceId   String   @map("service_id")
+  startTime   DateTime @map("start_time")
+  endTime     DateTime @map("end_time")
+  expiresAt   DateTime @map("expires_at")
+  isConverted Boolean  @default(false) @map("is_converted")
+  createdAt   DateTime @default(now()) @map("created_at")
 
   // Relations
   tenant   Tenant          @relation(fields: [tenantId], references: [id])

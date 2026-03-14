@@ -4,14 +4,14 @@
 // ============================================
 
 model ProviderSchedule {
-  id          String   @id @default(uuid())
-  providerId  String   @map("provider_id")
-  dayOfWeek   Int      @map("day_of_week")
-  startTime   DateTime @map("start_time") @db.Time
-  endTime     DateTime @map("end_time") @db.Time
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id         String   @id @default(uuid())
+  providerId String   @map("provider_id")
+  dayOfWeek  Int      @map("day_of_week")
+  startTime  DateTime @map("start_time") @db.Time
+  endTime    DateTime @map("end_time") @db.Time
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   // Relations
   provider ProviderProfile @relation(fields: [providerId], references: [id], onDelete: Cascade)

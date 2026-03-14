@@ -4,14 +4,14 @@
 // ============================================
 
 model RefreshToken {
-  id         String   @id @default(uuid())
-  userId     String   @map("user_id")
-  tokenHash  String   @unique @map("token_hash") @db.VarChar(255)
-  userAgent  String?  @map("user_agent") @db.Text
-  ipAddress  String?  @map("ip_address")
-  expiresAt  DateTime @map("expires_at")
-  revokedAt  DateTime? @map("revoked_at")
-  createdAt  DateTime @default(now()) @map("created_at")
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash") @db.VarChar(255)
+  userAgent String?   @map("user_agent") @db.Text
+  ipAddress String?   @map("ip_address")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

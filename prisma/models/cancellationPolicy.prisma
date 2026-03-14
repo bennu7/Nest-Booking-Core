@@ -4,14 +4,14 @@
 // ============================================
 
 model CancellationPolicy {
-  id                String   @id @default(uuid())
-  tenantId          String   @map("tenant_id")
-  name              String   @db.VarChar(255)
-  hoursBeforeFree   Int      @default(24) @map("hours_before_free")
-  lateCancelCharge  Decimal  @default(50) @map("late_cancel_charge") @db.Decimal(5, 2)
-  noShowCharge      Decimal  @default(100) @map("no_show_charge") @db.Decimal(5, 2)
-  isDefault         Boolean  @default(false) @map("is_default")
-  createdAt         DateTime @default(now()) @map("created_at")
+  id               String   @id @default(uuid())
+  tenantId         String   @map("tenant_id")
+  name             String   @db.VarChar(255)
+  hoursBeforeFree  Int      @default(24) @map("hours_before_free")
+  lateCancelCharge Decimal  @default(50) @map("late_cancel_charge") @db.Decimal(5, 2)
+  noShowCharge     Decimal  @default(100) @map("no_show_charge") @db.Decimal(5, 2)
+  isDefault        Boolean  @default(false) @map("is_default")
+  createdAt        DateTime @default(now()) @map("created_at")
 
   // Relations
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)

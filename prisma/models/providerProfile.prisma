@@ -4,20 +4,20 @@
 // ============================================
 
 model ProviderProfile {
-  id            String   @id @default(uuid())
-  userId        String   @unique @map("user_id")
-  tenantId      String   @map("tenant_id")
-  bio           String?  @db.Text
-  specialization String? @db.Text
-  ratingAvg     Decimal  @default(0.00) @map("rating_avg") @db.Decimal(3, 2)
-  totalReviews  Int      @default(0) @map("total_reviews")
-  isAvailable   Boolean  @default(true) @map("is_available")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(uuid())
+  userId         String   @unique @map("user_id")
+  tenantId       String   @map("tenant_id")
+  bio            String?  @db.Text
+  specialization String?  @db.Text
+  ratingAvg      Decimal  @default(0.00) @map("rating_avg") @db.Decimal(3, 2)
+  totalReviews   Int      @default(0) @map("total_reviews")
+  isAvailable    Boolean  @default(true) @map("is_available")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   // Relations
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant    Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   schedules ProviderSchedule[]
   breaks    ProviderBreak[]
   services  Service[]
