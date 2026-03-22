@@ -51,7 +51,10 @@ export class AuthService {
     return result;
   }
 
-  async login(dto: LoginDto) {
+  async login(
+    dto: LoginDto,
+    metadata: { ipAddress?: string; userAgent?: string },
+  ) {
     const user = await this.prisma.user.findUnique({
       where: {
         tenantId_email: {
@@ -73,10 +76,100 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    return this.generateTokens(user.id, user.email, user.role);
+    const token = await this._generateTokens({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    await this._tokenHash({
+      userId: user.id,
+      refreshToken: token.refreshToken,
+      ipAddress: metadata.ipAddress,
+      userAgent: metadata.userAgent,
+    });
+
+    return token;
   }
 
-  private async generateTokens(userId: string, email: string, role: string) {
+  async refreshToken(refreshToken: string) {
+    const findRefreshToken = await this.prisma.refreshToken.findUnique({
+      where: {
+        tokenHash: refreshToken,
+      },
+      select: {
+        userId: true,
+        expiresAt: true,
+      },
+    });
+
+    if (!findRefreshToken) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    if (findRefreshToken.expiresAt < new Date()) {
+      throw new UnauthorizedException('Refresh token expired');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: findRefreshToken.userId,
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const newToken = await this._generateTokens({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    await this._tokenHash({
+      userId: user.id,
+      refreshToken: newToken.refreshToken,
+    });
+
+    return newToken;
+  }
+
+  async logout(refreshToken: string) {
+    const findRefreshToken = await this.prisma.refreshToken.findUnique({
+      where: {
+        tokenHash: refreshToken,
+      },
+      select: {
+        userId: true,
+      },
+    });
+
+    if (!findRefreshToken) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    await this.prisma.refreshToken.delete({
+      where: {
+        tokenHash: refreshToken,
+      },
+    });
+  }
+
+  private async _generateTokens({
+    userId,
+    email,
+    role,
+  }: {
+    userId: string;
+    email: string;
+    role: string;
+  }) {
     const paylod = {
       userId,
       email,
@@ -92,6 +185,56 @@ export class AuthService {
       secret: this.configService.get('JWT_SECRET_REFRESH'),
       expiresIn: this.configService.get('JWT_SECRET_REFRESH_EXPIRES_IN'),
     });
+
     return { accessToken, refreshToken };
+  }
+
+  // generate token hash and store in database
+  private async _tokenHash({
+    userId,
+    refreshToken,
+    userAgent,
+    ipAddress,
+  }: {
+    userId: string;
+    refreshToken: string;
+    userAgent?: string;
+    ipAddress?: string;
+  }) {
+    const hashedToken = await bcrypt.hash(refreshToken, 10);
+    const valueExpiresIn =
+      this.configService.get('JWT_SECRET_REFRESH_EXPIRES_IN') ?? 7;
+    const expiresAt = this._parseExpiresToDate(valueExpiresIn);
+
+    await this.prisma.refreshToken.create({
+      data: {
+        userId,
+        tokenHash: hashedToken,
+        expiresAt,
+        userAgent,
+        ipAddress,
+      },
+    });
+  }
+
+  // parse expiresIn to Date object
+  private _parseExpiresToDate(expiresIn: string | number): Date {
+    const now = new Date();
+
+    if (typeof expiresIn === 'number') {
+      now.setDate(now.getDate() + expiresIn);
+      return now;
+    }
+
+    const match = /^(\d+)(d)?$/.exec(expiresIn);
+
+    if (match) {
+      const value = parseInt(match[1], 10);
+
+      now.setDate(now.getDate() + value);
+      return now;
+    }
+
+    throw new Error(`Invalid expires format: ${expiresIn}`);
   }
 }

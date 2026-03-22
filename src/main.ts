@@ -1,12 +1,14 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
+
 import { AppModule } from './app.module';
 import appConfig from './config/app.config';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ResponseFormatterInterceptor } from './common/interceptors/response-formatter.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const { port, nodeName } = appConfig();
 
   app.useGlobalPipes(
@@ -20,6 +22,9 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ResponseFormatterInterceptor());
 
   app.useGlobalFilters(new HttpExceptionFilter());
+
+  // set headers user-agent
+  app.getHttpAdapter().getInstance().set('user-agent', true);
 
   await app.listen(port).then(() => {
     console.log(`\t🚀 App ${nodeName} Running on port ${port} `);
