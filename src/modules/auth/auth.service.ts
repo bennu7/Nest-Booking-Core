@@ -282,7 +282,10 @@ export class AuthService {
     userAgent?: string;
     ipAddress?: string;
   }) {
-    const hashedToken = await bcrypt.hash(refreshToken, 10);
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(refreshToken)
+      .digest('hex');
     const valueExpiresIn =
       this.configService.get('JWT_SECRET_REFRESH_EXPIRES_IN') ?? 7;
     const expiresAt = this._parseExpiresToDate(valueExpiresIn);
@@ -290,7 +293,7 @@ export class AuthService {
     await this.prisma.refreshToken.create({
       data: {
         userId,
-        tokenHash: hashedToken,
+        tokenHash,
         expiresAt,
         userAgent,
         ipAddress,

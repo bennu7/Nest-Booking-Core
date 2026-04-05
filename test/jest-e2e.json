@@ -5,5 +5,19 @@
   "testRegex": ".e2e-spec.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "^@generated/(.*)$": "<rootDir>/../src/generated/$1",
+    "^src/(.*)$": "<rootDir>/../src/$1",
+    "^\\.\\./generated/client\\.js$": "<rootDir>/../src/generated/client.ts",
+    "^\\./enums\\.js$": "<rootDir>/../src/generated/enums.ts",
+    "^\\./internal/class\\.js$": "<rootDir>/../src/generated/internal/class.ts",
+    "^\\./internal/prismaNamespace\\.js$": "<rootDir>/../src/generated/internal/prismaNamespace.ts",
+    "^\\./internal/prismaNamespaceBrowser\\.js$": "<rootDir>/../src/generated/internal/prismaNamespaceBrowser.ts",
+    "^\\.\\./enums\\.js$": "<rootDir>/../src/generated/enums.ts",
+    "^\\.\\./internal/prismaNamespace\\.js$": "<rootDir>/../src/generated/internal/prismaNamespace.ts",
+    "^\\.\\./models\\.js$": "<rootDir>/../src/generated/models.ts",
+    "^\\./models/([A-Za-z0-9_-]+)\\.js$": "<rootDir>/../src/generated/models/$1.ts",
+    "^\\./commonInputTypes\\.js$": "<rootDir>/../src/generated/commonInputTypes.ts"
   }
 }
