@@ -20,6 +20,7 @@ enum UserRole {
   ADMIN
   PROVIDER
   CUSTOMER
+  SUPER_ADMIN
 }
 
 enum AuthProvider {

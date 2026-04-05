@@ -9,10 +9,6 @@ import {
 import { UserRole } from '@generated/enums';
 
 export class RegisterDto {
-  @IsNotEmpty()
-  @IsString()
-  tenantId: string;
-
   @IsEmail({}, { message: 'Format email salah' })
   email: string;
 

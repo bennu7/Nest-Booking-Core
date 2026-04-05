@@ -1,9 +1,15 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export class LoginDto {
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  tenantId: string; // ssers must know which tenant they want to log in to
+  tenantId?: string | null; // users must know which tenant they want to log in to, if null is super admin
 
   @IsEmail({}, { message: 'Format email salah' })
   email: string;

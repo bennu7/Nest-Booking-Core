@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { VersioningType } from '@nestjs/common';
 
 import { AppModule } from './app.module';
 import appConfig from './config/app.config';
@@ -24,7 +25,13 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
 
   // set headers user-agent
-  app.getHttpAdapter().getInstance().set('user-agent', true);
+  app.getHttpAdapter().getInstance().set('trust proxy', true);
+
+  app.enableVersioning({
+    type: VersioningType.URI,
+    prefix: 'api/v',
+    defaultVersion: '1',
+  });
 
   await app.listen(port).then(() => {
     console.log(`\t🚀 App ${nodeName} Running on port ${port} `);

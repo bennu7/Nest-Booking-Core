@@ -8,6 +8,7 @@ import { PrismaModule } from './prisma';
 import { AppConfigModule } from './config/config.module';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { TenantModule } from './modules/tenant/tenant.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 
@@ -17,6 +18,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     PrismaModule,
     HealthModule,
     AuthModule,
+    TenantModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

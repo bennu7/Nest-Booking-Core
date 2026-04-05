@@ -11,11 +11,15 @@ import { ThrottlerGuard } from '@nestjs/throttler';
 
 import { LoginDto } from './dto/login.dto';
 import { AuthService } from './auth.service';
+import { LogoutDto } from './dto/logout.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ApiResponse } from 'src/common/dto/api-response.dto';
 import { Public } from 'src/common/decorators/public.decorator';
+import { CreateTenantDto } from '../tenant/dto/create-tenant.dto';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import type { CurrentUserPayload } from 'src/common/decorators/current-user.decorator';
 
-@Controller('auth')
+@Controller({ path: 'auth', version: '1' })
 @UseGuards(ThrottlerGuard)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -51,10 +55,36 @@ export class AuthController {
     });
   }
 
+  @Post('setup-tenant')
+  async setupTenant(
+    @Body() dto: CreateTenantDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    const result = await this.authService.setupTenant(user.id, dto);
+
+    return new ApiResponse({
+      code: HttpStatus.CREATED,
+      message: 'Tenant setup completed',
+      data: result,
+    });
+  }
+
   @Public()
   @Post('refresh-token')
   async refreshToken(@Body('refreshToken') refreshToken: string) {
     const result = await this.authService.refreshToken(refreshToken);
+
+    return new ApiResponse({
+      code: HttpStatus.OK,
+      message: 'Success',
+      data: result,
+    });
+  }
+
+  @Public()
+  @Post('logout')
+  async logout(@Body() dto: LogoutDto) {
+    const result = await this.authService.logout(dto.refreshToken);
 
     return new ApiResponse({
       code: HttpStatus.OK,

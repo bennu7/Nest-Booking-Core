@@ -1,3 +1,5 @@
+import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import {
   BadRequestException,
   Injectable,
@@ -5,10 +7,12 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+
 import { PrismaService } from 'src/prisma';
-import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import * as bcrypt from 'bcrypt';
+import { RegisterDto } from './dto/register.dto';
+import { CreateTenantDto } from '../tenant/dto/create-tenant.dto';
+import { JwtPayload } from './strategies/jwt.strategy';
 
 @Injectable()
 export class AuthService {
@@ -19,18 +23,17 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    const existingUSer = await this.prisma.user.findUnique({
+    const checkEmail = await this.prisma.user.findUnique({
       where: {
-        tenantId_email: {
-          tenantId: dto.tenantId,
-          email: dto.email,
-        },
+        email: dto.email,
+      },
+      select: {
+        email: true,
       },
     });
 
-    console.log('existingUSer ==>> ', existingUSer);
-    if (existingUSer) {
-      throw new BadRequestException('Email already registered');
+    if (checkEmail) {
+      throw new BadRequestException('Email already registered!');
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
@@ -41,7 +44,6 @@ export class AuthService {
         fullName: dto.fullName,
         phone: dto.phone,
         role: dto.role,
-        tenantId: dto.tenantId,
       },
     });
 
@@ -55,14 +57,21 @@ export class AuthService {
     dto: LoginDto,
     metadata: { ipAddress?: string; userAgent?: string },
   ) {
-    const user = await this.prisma.user.findUnique({
-      where: {
-        tenantId_email: {
-          tenantId: dto.tenantId,
-          email: dto.email,
-        },
-      },
-    });
+    const user = dto.tenantId
+      ? await this.prisma.user.findUnique({
+          where: {
+            tenantId_email: {
+              tenantId: dto.tenantId,
+              email: dto.email,
+            },
+          },
+        })
+      : await this.prisma.user.findFirst({
+          where: {
+            email: dto.email,
+            tenantId: null,
+          },
+        });
 
     if (!user) {
       throw new UnauthorizedException('Email or password is incorrect');
@@ -92,10 +101,70 @@ export class AuthService {
     return token;
   }
 
+  async setupTenant(userId: string, dto: CreateTenantDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        tenantId: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (user.tenantId) {
+      throw new BadRequestException('User already has a tenant');
+    }
+
+    const existingSlug = await this.prisma.tenant.findUnique({
+      where: { slug: dto.slug },
+    });
+
+    if (existingSlug) {
+      throw new BadRequestException('Tenant slug already exists');
+    }
+
+    const tenant = await this.prisma.tenant.create({
+      data: {
+        name: dto.name,
+        slug: dto.slug,
+        email: dto.email,
+        phone: dto.phone,
+        address: dto.address,
+        timezone: dto.timezone ?? 'Asia/Jakarta',
+      },
+    });
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        tenantId: tenant.id,
+        role: 'ADMIN',
+      },
+    });
+
+    const userResult = {
+      ...user,
+      tenantId: tenant.id,
+      role: 'ADMIN' as const,
+    };
+
+    return { tenant, user: userResult };
+  }
+
   async refreshToken(refreshToken: string) {
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(refreshToken)
+      .digest('hex');
+
     const findRefreshToken = await this.prisma.refreshToken.findUnique({
       where: {
-        tokenHash: refreshToken,
+        tokenHash,
       },
       select: {
         userId: true,
@@ -132,6 +201,13 @@ export class AuthService {
       role: user.role,
     });
 
+    // ? 1 person can only have 1 refresh token at a time
+    await this.prisma.refreshToken.deleteMany({
+      where: {
+        userId: user.id,
+      },
+    });
+
     await this._tokenHash({
       userId: user.id,
       refreshToken: newToken.refreshToken,
@@ -141,9 +217,14 @@ export class AuthService {
   }
 
   async logout(refreshToken: string) {
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(refreshToken)
+      .digest('hex');
+
     const findRefreshToken = await this.prisma.refreshToken.findUnique({
       where: {
-        tokenHash: refreshToken,
+        tokenHash,
       },
       select: {
         userId: true,
@@ -156,7 +237,7 @@ export class AuthService {
 
     await this.prisma.refreshToken.delete({
       where: {
-        tokenHash: refreshToken,
+        tokenHash,
       },
     });
   }
@@ -170,18 +251,18 @@ export class AuthService {
     email: string;
     role: string;
   }) {
-    const paylod = {
-      userId,
+    const payload: JwtPayload = {
+      sub: userId,
       email,
       role,
     };
 
-    const accessToken = await this.jwtService.signAsync(paylod, {
+    const accessToken = await this.jwtService.signAsync(payload, {
       secret: this.configService.get('JWT_SECRET'),
       expiresIn: this.configService.get('JWT_EXPIRES_IN'),
     });
 
-    const refreshToken = await this.jwtService.signAsync(paylod, {
+    const refreshToken = await this.jwtService.signAsync(payload, {
       secret: this.configService.get('JWT_SECRET_REFRESH'),
       expiresIn: this.configService.get('JWT_SECRET_REFRESH_EXPIRES_IN'),
     });
