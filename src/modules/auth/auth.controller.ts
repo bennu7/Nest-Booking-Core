@@ -1,10 +1,12 @@
 import {
   Body,
   Controller,
-  Post,
   HttpStatus,
   Ip,
   Headers,
+  Param,
+  Patch,
+  Post,
   UseGuards,
 } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
@@ -13,11 +15,14 @@ import { LoginDto } from './dto/login.dto';
 import { AuthService } from './auth.service';
 import { LogoutDto } from './dto/logout.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ToggleUserStatusDto } from './dto/toggle-user-status.dto';
 import { ApiResponse } from 'src/common/dto/api-response.dto';
 import { Public } from 'src/common/decorators/public.decorator';
 import { CreateTenantDto } from '../tenant/dto/create-tenant.dto';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import type { CurrentUserPayload } from 'src/common/decorators/current-user.decorator';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { UserRole } from '@generated/enums';
 
 @Controller({ path: 'auth', version: '1' })
 @UseGuards(ThrottlerGuard)
@@ -89,6 +94,28 @@ export class AuthController {
     return new ApiResponse({
       code: HttpStatus.OK,
       message: 'Success',
+      data: result,
+    });
+  }
+
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Patch('users/:id/status')
+  async toggleUserStatus(
+    @Param('id') userId: string,
+    @Body() dto: ToggleUserStatusDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    const result = await this.authService.toggleUserStatus(
+      userId,
+      dto,
+      user.id,
+    );
+
+    return new ApiResponse({
+      code: HttpStatus.OK,
+      message: dto.isActive
+        ? 'User activated successfully'
+        : 'User deactivated successfully',
       data: result,
     });
   }

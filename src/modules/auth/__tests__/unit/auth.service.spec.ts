@@ -138,6 +138,8 @@ describe('AuthService', () => {
         email: dto.email,
         passwordHash: hash,
         role: UserRole.CUSTOMER,
+        isActive: true,
+        tenantId: null,
       });
       jwtService.signAsync
         .mockResolvedValueOnce('access.jwt')
@@ -164,6 +166,12 @@ describe('AuthService', () => {
         email: dto.email,
         passwordHash: hash,
         role: UserRole.ADMIN,
+        isActive: true,
+        tenantId: 'tenant-1',
+      });
+      prisma.tenant.findUnique.mockResolvedValue({
+        isActive: true,
+        disabledReason: null,
       });
       jwtService.signAsync
         .mockResolvedValueOnce('a')
@@ -178,6 +186,44 @@ describe('AuthService', () => {
         },
       });
       expect(prisma.user.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('throws when user is deactivated', async () => {
+      const dto = loginDto();
+      prisma.user.findFirst.mockResolvedValue({
+        id: 'u1',
+        email: dto.email,
+        passwordHash: 'hash',
+        role: UserRole.CUSTOMER,
+        isActive: false,
+        disabledReason: 'Violation of terms',
+        tenantId: null,
+      });
+
+      await expect(
+        service.login(dto, { ipAddress: '1.1.1.1', userAgent: 'jest' }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('throws when tenant is deactivated', async () => {
+      const dto = loginDto({ tenantId: 'tenant-1' });
+      const hash = await bcrypt.hash(dto.password, 4);
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'u1',
+        email: dto.email,
+        passwordHash: hash,
+        role: UserRole.ADMIN,
+        isActive: true,
+        tenantId: 'tenant-1',
+      });
+      prisma.tenant.findUnique.mockResolvedValue({
+        isActive: false,
+        disabledReason: 'Billing issue',
+      });
+
+      await expect(
+        service.login(dto, { ipAddress: '1.1.1.1', userAgent: 'jest' }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
     });
   });
 

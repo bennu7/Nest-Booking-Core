@@ -13,6 +13,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { CreateTenantDto } from '../tenant/dto/create-tenant.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
+import { ToggleUserStatusDto } from './dto/toggle-user-status.dto';
 
 @Injectable()
 export class AuthService {
@@ -75,6 +76,27 @@ export class AuthService {
 
     if (!user) {
       throw new UnauthorizedException('Email or password is incorrect');
+    }
+
+    if (!user.isActive) {
+      const reason = user.disabledReason ?? 'No reason provided';
+      throw new UnauthorizedException(
+        `Account has been deactivated. Reason: ${reason}`,
+      );
+    }
+
+    if (user.tenantId) {
+      const tenant = await this.prisma.tenant.findUnique({
+        where: { id: user.tenantId },
+        select: { isActive: true, disabledReason: true },
+      });
+
+      if (!tenant?.isActive) {
+        const reason = tenant?.disabledReason ?? 'No reason provided';
+        throw new UnauthorizedException(
+          `Tenant has been deactivated. Reason: ${reason}`,
+        );
+      }
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -238,6 +260,30 @@ export class AuthService {
     await this.prisma.refreshToken.delete({
       where: {
         tokenHash,
+      },
+    });
+  }
+
+  async toggleUserStatus(
+    userId: string,
+    dto: ToggleUserStatusDto,
+    disabledBy?: string,
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        isActive: dto.isActive,
+        disabledReason: dto.isActive ? null : (dto.reason ?? null),
+        disabledAt: dto.isActive ? null : new Date(),
+        disabledBy: dto.isActive ? null : (disabledBy ?? null),
       },
     });
   }

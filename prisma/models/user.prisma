@@ -15,12 +15,17 @@ model User {
   authProvider   AuthProvider @default(LOCAL) @map("auth_provider")
   authProviderId String?      @map("auth_provider_id") @db.VarChar(255)
   isActive       Boolean      @default(true) @map("is_active")
+  disabledReason String?      @map("disabled_reason") @db.VarChar(500)
+  disabledAt     DateTime?    @map("disabled_at")
+  disabledBy     String?      @map("disabled_by")
   lastLoginAt    DateTime?    @map("last_login_at")
   createdAt      DateTime     @default(now()) @map("created_at")
   updatedAt      DateTime     @updatedAt @map("updated_at")
 
   // Relations
   tenant            Tenant?          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  disabledByUser    User?            @relation("DisabledByUser", fields: [disabledBy], references: [id])
+  usersDisabled     User[]           @relation("DisabledByUser")
   refreshTokens     RefreshToken[]
   providerProfile   ProviderProfile?
   bookings          Booking[]

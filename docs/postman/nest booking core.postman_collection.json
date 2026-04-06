@@ -171,6 +171,49 @@
           "response": []
         },
         {
+          "name": "toggle user status",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"isActive\": false,\n    \"reason\": \"Violation of terms of service\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/api/v1/auth/users/:id/status",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "auth", "users", ":id", "status"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "refresh token",
           "request": {
             "method": "POST",
@@ -317,6 +360,49 @@
               "variable": [
                 {
                   "key": "slug",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "toggle tenant status",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"isActive\": false,\n    \"reason\": \"Billing issue - payment overdue for 30 days\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/api/v1/tenants/:id/status",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "tenants", ":id", "status"],
+              "variable": [
+                {
+                  "key": "id",
                   "value": ""
                 }
               ]

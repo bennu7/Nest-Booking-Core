@@ -12,10 +12,13 @@ model Tenant {
   address   String?  @db.Text
   timezone  String   @default("Asia/Jakarta") @db.VarChar(50)
   logoUrl   String?  @db.Text
-  isActive  Boolean  @default(true)
-  settings  Json     @default("{}")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  isActive       Boolean  @default(true)
+  disabledReason String?  @map("disabled_reason") @db.VarChar(500)
+  disabledAt     DateTime? @map("disabled_at")
+  disabledBy     String?  @map("disabled_by")
+  settings       Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
   // Relations
   users                User[]

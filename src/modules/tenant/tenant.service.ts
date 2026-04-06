@@ -56,4 +56,29 @@ export class TenantService {
 
     return tenant;
   }
+
+  async toggleStatus(
+    id: string,
+    isActive: boolean,
+    reason?: string,
+    disabledBy?: string,
+  ) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id },
+    });
+
+    if (!tenant) {
+      throw new NotFoundException('Tenant not found');
+    }
+
+    return this.prisma.tenant.update({
+      where: { id },
+      data: {
+        isActive,
+        disabledReason: isActive ? null : (reason ?? null),
+        disabledAt: isActive ? null : new Date(),
+        disabledBy: isActive ? null : (disabledBy ?? null),
+      },
+    });
+  }
 }
