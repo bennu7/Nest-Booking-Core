@@ -6,11 +6,14 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { TenantService } from './tenant.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
+import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { ToggleStatusDto } from './dto/toggle-status.dto';
 import { ApiResponse } from 'src/common/dto/api-response.dto';
+import { PaginationQueryDto } from 'src/common/dto/pagination.dto';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { UserRole } from '@generated/enums';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
@@ -33,9 +36,9 @@ export class TenantController {
   }
 
   @Roles(UserRole.SUPER_ADMIN)
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
-    const result = await this.tenantService.findOne(id);
+  @Get()
+  async findAll(@Query() query: PaginationQueryDto) {
+    const result = await this.tenantService.findManyPaginated(query);
 
     return new ApiResponse({
       code: HttpStatus.OK,
@@ -48,6 +51,18 @@ export class TenantController {
   @Get('slug/:slug')
   async findBySlug(@Param('slug') slug: string) {
     const result = await this.tenantService.findBySlug(slug);
+
+    return new ApiResponse({
+      code: HttpStatus.OK,
+      message: 'Success',
+      data: result,
+    });
+  }
+
+  @Roles(UserRole.SUPER_ADMIN)
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    const result = await this.tenantService.findOne(id);
 
     return new ApiResponse({
       code: HttpStatus.OK,
@@ -75,6 +90,18 @@ export class TenantController {
       message: dto.isActive
         ? 'Tenant activated successfully'
         : 'Tenant deactivated successfully',
+      data: result,
+    });
+  }
+
+  @Roles(UserRole.SUPER_ADMIN)
+  @Patch(':id')
+  async update(@Param('id') id: string, @Body() dto: UpdateTenantDto) {
+    const result = await this.tenantService.update(id, dto);
+
+    return new ApiResponse({
+      code: HttpStatus.OK,
+      message: 'Tenant updated successfully',
       data: result,
     });
   }

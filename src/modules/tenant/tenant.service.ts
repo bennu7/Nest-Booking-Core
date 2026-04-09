@@ -4,7 +4,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma';
+import {
+  getPaginationParams,
+  PaginationQueryDto,
+} from 'src/common/dto/pagination.dto';
 import { CreateTenantDto } from './dto/create-tenant.dto';
+import { UpdateTenantDto } from './dto/update-tenant.dto';
 
 @Injectable()
 export class TenantService {
@@ -31,6 +36,34 @@ export class TenantService {
     });
 
     return tenant;
+  }
+
+  async findManyPaginated(query: PaginationQueryDto) {
+    const { skip, take, page, limit } = getPaginationParams(query);
+    const [items, total] = await Promise.all([
+      this.prisma.tenant.findMany({
+        skip,
+        take,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.tenant.count(),
+    ]);
+    return { items, total, page, limit };
+  }
+
+  async update(id: string, dto: UpdateTenantDto) {
+    await this.findOne(id);
+    return this.prisma.tenant.update({
+      where: { id },
+      data: {
+        ...(dto.name !== undefined && { name: dto.name }),
+        ...(dto.email !== undefined && { email: dto.email }),
+        ...(dto.phone !== undefined && { phone: dto.phone }),
+        ...(dto.address !== undefined && { address: dto.address }),
+        ...(dto.timezone !== undefined && { timezone: dto.timezone }),
+        ...(dto.logoUrl !== undefined && { logoUrl: dto.logoUrl }),
+      },
+    });
   }
 
   async findOne(id: string) {
