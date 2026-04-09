@@ -75,7 +75,12 @@ describe('AuthController', () => {
   describe('setupTenant', () => {
     it('delegates with current user id', async () => {
       const dto = createTenantDto();
-      const payload = { id: 'user-1', email: 'a@b.com', role: 'CUSTOMER' };
+      const payload = {
+        id: 'user-1',
+        email: 'a@b.com',
+        role: 'CUSTOMER',
+        tenantId: null,
+      };
       const out = { tenant: { id: 't1' }, user: payload };
       authService.setupTenant.mockResolvedValue(out);
 

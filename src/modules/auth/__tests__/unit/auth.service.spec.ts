@@ -1,10 +1,14 @@
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
 
-import { UserRole } from '@generated/enums';
+import { AuthProvider, UserRole } from '@generated/enums';
 
 import { PrismaService } from 'src/prisma';
 import { AuthService } from '../../auth.service';
@@ -38,7 +42,7 @@ function createPrismaMock() {
 describe('AuthService', () => {
   let service: AuthService;
   let prisma: ReturnType<typeof createPrismaMock>;
-  let jwtService: { signAsync: jest.Mock };
+  let jwtService: { signAsync: jest.Mock; decode: jest.Mock };
   let configGet: jest.Mock;
 
   const configMap: Record<string, string | number> = {
@@ -50,7 +54,12 @@ describe('AuthService', () => {
 
   beforeEach(async () => {
     prisma = createPrismaMock();
-    jwtService = { signAsync: jest.fn() };
+    jwtService = {
+      signAsync: jest.fn(),
+      decode: jest.fn().mockReturnValue({
+        exp: Math.floor(Date.now() / 1000) + 7 * 24 * 3600,
+      }),
+    };
     configGet = jest.fn((key: string) => configMap[key]);
 
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -123,6 +132,23 @@ describe('AuthService', () => {
         email: loginDto().email,
         passwordHash: hash,
         role: UserRole.CUSTOMER,
+        authProvider: AuthProvider.LOCAL,
+      });
+
+      await expect(
+        service.login(loginDto(), { ipAddress: '1.1.1.1', userAgent: 'jest' }),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('rejects password login when auth provider is not LOCAL', async () => {
+      prisma.user.findFirst.mockResolvedValue({
+        id: 'u1',
+        email: loginDto().email,
+        passwordHash: 'x',
+        role: UserRole.CUSTOMER,
+        isActive: true,
+        tenantId: null,
+        authProvider: AuthProvider.GOOGLE,
       });
 
       await expect(
@@ -140,6 +166,7 @@ describe('AuthService', () => {
         role: UserRole.CUSTOMER,
         isActive: true,
         tenantId: null,
+        authProvider: AuthProvider.LOCAL,
       });
       jwtService.signAsync
         .mockResolvedValueOnce('access.jwt')
@@ -168,6 +195,7 @@ describe('AuthService', () => {
         role: UserRole.ADMIN,
         isActive: true,
         tenantId: 'tenant-1',
+        authProvider: AuthProvider.LOCAL,
       });
       prisma.tenant.findUnique.mockResolvedValue({
         isActive: true,
@@ -198,6 +226,7 @@ describe('AuthService', () => {
         isActive: false,
         disabledReason: 'Violation of terms',
         tenantId: null,
+        authProvider: AuthProvider.LOCAL,
       });
 
       await expect(
@@ -215,6 +244,7 @@ describe('AuthService', () => {
         role: UserRole.ADMIN,
         isActive: true,
         tenantId: 'tenant-1',
+        authProvider: AuthProvider.LOCAL,
       });
       prisma.tenant.findUnique.mockResolvedValue({
         isActive: false,
@@ -341,6 +371,7 @@ describe('AuthService', () => {
         id: 'u1',
         email: 'a@b.com',
         role: UserRole.CUSTOMER,
+        tenantId: null,
       });
       jwtService.signAsync
         .mockResolvedValueOnce('new-access')
@@ -358,6 +389,78 @@ describe('AuthService', () => {
         where: { userId: 'u1' },
       });
       expect(prisma.refreshToken.create).toHaveBeenCalled();
+    });
+  });
+
+  describe('toggleUserStatus', () => {
+    it('forbids ADMIN changing user in another tenant', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'target',
+        tenantId: 't-other',
+        email: 'x@y.com',
+        isActive: true,
+      });
+
+      await expect(
+        service.toggleUserStatus(
+          'target',
+          { isActive: false },
+          {
+            id: 'actor',
+            role: UserRole.ADMIN,
+            tenantId: 't-self',
+          },
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('allows ADMIN for user in same tenant', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'target',
+        tenantId: 't1',
+        email: 'x@y.com',
+        isActive: true,
+      });
+      prisma.user.update.mockResolvedValue({});
+
+      await service.toggleUserStatus(
+        'target',
+        { isActive: false, reason: 'test' },
+        {
+          id: 'actor',
+          role: UserRole.ADMIN,
+          tenantId: 't1',
+        },
+      );
+
+      expect(prisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'target' },
+          data: expect.objectContaining({ disabledBy: 'actor' }),
+        }),
+      );
+    });
+
+    it('allows SUPER_ADMIN across tenants', async () => {
+      prisma.user.findUnique.mockResolvedValue({
+        id: 'target',
+        tenantId: 't-far',
+        email: 'x@y.com',
+        isActive: true,
+      });
+      prisma.user.update.mockResolvedValue({});
+
+      await service.toggleUserStatus(
+        'target',
+        { isActive: true },
+        {
+          id: 'sa',
+          role: UserRole.SUPER_ADMIN,
+          tenantId: null,
+        },
+      );
+
+      expect(prisma.user.update).toHaveBeenCalled();
     });
   });
 

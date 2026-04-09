@@ -6,6 +6,7 @@ import { VersioningType } from '@nestjs/common';
 import { AppModule } from './app.module';
 import appConfig from './config/app.config';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { TenantContextInterceptor } from './common/middleware/tenant-context.middleware';
 import { ResponseFormatterInterceptor } from './common/interceptors/response-formatter.interceptor';
 
 async function bootstrap() {
@@ -20,7 +21,10 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalInterceptors(new ResponseFormatterInterceptor());
+  app.useGlobalInterceptors(
+    new TenantContextInterceptor(),
+    new ResponseFormatterInterceptor(),
+  );
 
   app.useGlobalFilters(new HttpExceptionFilter());
 

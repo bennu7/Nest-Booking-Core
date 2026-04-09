@@ -105,11 +105,7 @@ export class AuthController {
     @Body() dto: ToggleUserStatusDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const result = await this.authService.toggleUserStatus(
-      userId,
-      dto,
-      user.id,
-    );
+    const result = await this.authService.toggleUserStatus(userId, dto, user);
 
     return new ApiResponse({
       code: HttpStatus.OK,

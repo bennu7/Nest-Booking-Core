@@ -2,6 +2,7 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -14,6 +15,7 @@ import { RegisterDto } from './dto/register.dto';
 import { CreateTenantDto } from '../tenant/dto/create-tenant.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
 import { ToggleUserStatusDto } from './dto/toggle-user-status.dto';
+import { AuthProvider, UserRole } from '@generated/enums';
 
 @Injectable()
 export class AuthService {
@@ -85,6 +87,16 @@ export class AuthService {
       );
     }
 
+    if (user.authProvider !== AuthProvider.LOCAL) {
+      throw new UnauthorizedException(
+        'Password sign-in is not enabled for this account',
+      );
+    }
+
+    if (!user.passwordHash) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
     if (user.tenantId) {
       const tenant = await this.prisma.tenant.findUnique({
         where: { id: user.tenantId },
@@ -101,7 +113,7 @@ export class AuthService {
 
     const isPasswordValid = await bcrypt.compare(
       dto.password,
-      user.passwordHash ?? '',
+      user.passwordHash,
     );
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
@@ -111,6 +123,7 @@ export class AuthService {
       userId: user.id,
       email: user.email,
       role: user.role,
+      tenantId: user.tenantId ?? null,
     });
 
     await this._tokenHash({
@@ -210,6 +223,7 @@ export class AuthService {
         id: true,
         email: true,
         role: true,
+        tenantId: true,
       },
     });
 
@@ -221,6 +235,7 @@ export class AuthService {
       userId: user.id,
       email: user.email,
       role: user.role,
+      tenantId: user.tenantId ?? null,
     });
 
     // ? 1 person can only have 1 refresh token at a time
@@ -267,7 +282,7 @@ export class AuthService {
   async toggleUserStatus(
     userId: string,
     dto: ToggleUserStatusDto,
-    disabledBy?: string,
+    actor: { id: string; role: string; tenantId: string | null },
   ) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -277,13 +292,28 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
+    if (actor.role === UserRole.ADMIN) {
+      if (actor.tenantId === null) {
+        throw new BadRequestException(
+          'Admin must belong to a tenant to manage users',
+        );
+      }
+      if (user.tenantId !== actor.tenantId) {
+        throw new ForbiddenException(
+          'You can only manage users in your tenant',
+        );
+      }
+    } else if (actor.role !== UserRole.SUPER_ADMIN) {
+      throw new ForbiddenException('Insufficient permissions');
+    }
+
     return this.prisma.user.update({
       where: { id: userId },
       data: {
         isActive: dto.isActive,
         disabledReason: dto.isActive ? null : (dto.reason ?? null),
         disabledAt: dto.isActive ? null : new Date(),
-        disabledBy: dto.isActive ? null : (disabledBy ?? null),
+        disabledBy: dto.isActive ? null : (actor.id ?? null),
       },
     });
   }
@@ -292,15 +322,18 @@ export class AuthService {
     userId,
     email,
     role,
+    tenantId,
   }: {
     userId: string;
     email: string;
     role: string;
+    tenantId: string | null;
   }) {
     const payload: JwtPayload = {
       sub: userId,
       email,
       role,
+      tenantId,
     };
 
     const accessToken = await this.jwtService.signAsync(payload, {
@@ -332,9 +365,7 @@ export class AuthService {
       .createHash('sha256')
       .update(refreshToken)
       .digest('hex');
-    const valueExpiresIn =
-      this.configService.get('JWT_SECRET_REFRESH_EXPIRES_IN') ?? 7;
-    const expiresAt = this._parseExpiresToDate(valueExpiresIn);
+    const expiresAt = this._refreshExpiresAtFromToken(refreshToken);
 
     await this.prisma.refreshToken.create({
       data: {
@@ -345,6 +376,24 @@ export class AuthService {
         ipAddress,
       },
     });
+  }
+
+  /** Align DB expiry with the JWT `exp` claim (falls back to config if decode fails). */
+  private _refreshExpiresAtFromToken(refreshToken: string): Date {
+    const decoded = this.jwtService.decode(refreshToken);
+    if (
+      typeof decoded === 'object' &&
+      decoded !== null &&
+      'exp' in decoded &&
+      typeof (decoded as { exp: unknown }).exp === 'number'
+    ) {
+      return new Date((decoded as { exp: number }).exp * 1000);
+    }
+    const valueExpiresIn =
+      this.configService.get<string | number>(
+        'JWT_SECRET_REFRESH_EXPIRES_IN',
+      ) ?? 7;
+    return this._parseExpiresToDate(valueExpiresIn);
   }
 
   // parse expiresIn to Date object
