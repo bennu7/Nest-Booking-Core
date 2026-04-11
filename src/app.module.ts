@@ -11,6 +11,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { TenantModule } from './modules/tenant/tenant.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { ProviderModule } from './modules/provider/provider.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     HealthModule,
     AuthModule,
     TenantModule,
+    ProviderModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
