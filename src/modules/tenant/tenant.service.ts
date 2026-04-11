@@ -10,6 +10,8 @@ import {
 } from 'src/common/dto/pagination.dto';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
+import { CreateCategoryDto } from './dto/create-category.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @Injectable()
 export class TenantService {
@@ -36,6 +38,68 @@ export class TenantService {
     });
 
     return tenant;
+  }
+
+  async createCategory(tenantId: string, dto: CreateCategoryDto) {
+    const checkNameCategory = await this.prisma.serviceCategory.findFirst({
+      where: {
+        name: {
+          contains: dto.name,
+          mode: 'insensitive',
+        },
+        tenantId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (checkNameCategory) {
+      throw new BadRequestException('Category name already exists');
+    }
+
+    const category = await this.prisma.serviceCategory.create({
+      data: {
+        tenantId,
+        name: dto.name,
+        description: dto.description,
+        sortOrder: dto.sortOrder,
+        isActive: dto.isActive ?? true,
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+      },
+    });
+
+    return category;
+  }
+
+  async updateCategory(id: string, tenantId: string, dto: UpdateCategoryDto) {
+    if (dto.name) {
+      const existingName = await this.prisma.serviceCategory.findFirst({
+        where: {
+          name: { contains: dto.name, mode: 'insensitive' },
+          tenantId,
+        },
+        select: { id: true },
+      });
+
+      if (existingName) {
+        throw new BadRequestException('Category name already exists');
+      }
+    }
+
+    return this.prisma.serviceCategory.update({
+      where: { id, tenantId },
+      data: dto,
+      select: {
+        id: true,
+        name: true,
+        description: true,
+      },
+    });
   }
 
   async findManyPaginated(query: PaginationQueryDto) {
