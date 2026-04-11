@@ -1,3 +1,5 @@
+/// <reference types="webpack-env" />
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -8,9 +10,11 @@ import appConfig from './config/app.config';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TenantContextInterceptor } from './common/middleware/tenant-context.middleware';
 import { ResponseFormatterInterceptor } from './common/interceptors/response-formatter.interceptor';
+import { LoggingMiddleware } from './common/middleware/logging.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.enableShutdownHooks();
   const { port, nodeName } = appConfig();
 
   app.useGlobalPipes(
@@ -28,6 +32,10 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
+  // Global logging middleware
+  const loggingMiddleware = new LoggingMiddleware();
+  app.use(loggingMiddleware.use.bind(loggingMiddleware));
+
   // set headers user-agent
   app.getHttpAdapter().getInstance().set('trust proxy', true);
 
@@ -37,9 +45,16 @@ async function bootstrap() {
     defaultVersion: '1',
   });
 
-  await app.listen(port).then(() => {
-    console.log(`\t🚀 App ${nodeName} Running on port ${port} `);
-  });
+  // Do not retry `app.listen()` on failure: each attempt adds listeners on the same
+  // http.Server (MaxListenersExceededWarning) and EADDRINUSE here usually means another
+  // process still owns the port — backoff does not fix that.
+  await app.listen(port);
+  console.log(`\t🚀 App ${nodeName} Running on port ${port} `);
+
+  if (module.hot) {
+    module.hot.accept();
+    module.hot.dispose(() => void app.close());
+  }
 }
 
 bootstrap().catch((err) => {

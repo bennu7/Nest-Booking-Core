@@ -1,8 +1,8 @@
 import {
   Injectable,
   OnModuleInit,
-  OnModuleDestroy,
   Logger,
+  OnApplicationShutdown,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -19,7 +19,7 @@ interface PrismaQueryClient {
 @Injectable()
 export class PrismaService
   extends PrismaClient
-  implements OnModuleInit, OnModuleDestroy
+  implements OnModuleInit, OnApplicationShutdown
 {
   private readonly logger = new Logger(PrismaService.name);
 
@@ -82,7 +82,12 @@ export class PrismaService
     }
   }
 
-  async onModuleDestroy() {
+  /**
+   * Runs after the HTTP server is closed (see Nest shutdown sequence). Disconnecting
+   * here avoids blocking `httpAdapter.close()` behind slow `$disconnect` during watch restarts.
+   * @see https://docs.nestjs.com/fundamentals/lifecycle-events (Application shutdown)
+   */
+  async onApplicationShutdown() {
     await this.$disconnect();
   }
 }
