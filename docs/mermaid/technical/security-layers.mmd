@@ -1,0 +1,59 @@
+flowchart TD
+    subgraph L1["Layer 1 - Network / Infrastructure"]
+        RATE[Rate Limiting]
+        CORS[CORS Policy]
+        HTTPS[HTTPS / TLS]
+    end
+
+    subgraph L2["Layer 2 - Authentication"]
+        JWT[JWT Validation]
+        REFRESH[Refresh Token Rotation]
+        GOOGLE[Google OAuth Verify]
+        ACTIVE[Check User Active]
+        TENANT_ACTIVE[Check Tenant Active]
+    end
+
+    subgraph L3["Layer 3 - Authorization"]
+        ROLE[Role-Based Access Control]
+        TENANT_ISO[Tenant Isolation]
+        SCOPE[Resource Ownership Check]
+    end
+
+    subgraph L4["Layer 4 - Data Integrity"]
+        IDEMPOTENCY[Idempotency Keys]
+        VERSION[Optimistic Locking version]
+        AUDIT[BookingStatusLog Audit Trail]
+        TX[Database Transactions]
+    end
+
+    subgraph L5["Layer 5 - Application Security"]
+        VALIDATE[Input Validation DTO]
+        SANITIZE[SQL Injection Prevention Prisma]
+        HASH[Password Hashing bcrypt]
+        SIGN[Webhook Signature Verify]
+    end
+
+    RATE --> JWT
+    CORS --> JWT
+    HTTPS --> JWT
+    JWT --> REFRESH
+    JWT --> GOOGLE
+    JWT --> ACTIVE
+    JWT --> TENANT_ACTIVE
+    ACTIVE --> ROLE
+    TENANT_ACTIVE --> ROLE
+    ROLE --> TENANT_ISO
+    ROLE --> SCOPE
+    TENANT_ISO --> IDEMPOTENCY
+    SCOPE --> IDEMPOTENCY
+    IDEMPOTENCY --> VERSION
+    VERSION --> AUDIT
+    AUDIT --> TX
+    VALIDATE --> SANITIZE
+    SANITIZE --> HASH
+    HASH --> SIGN
+
+    L1 -.-> L2
+    L2 -.-> L3
+    L3 -.-> L4
+    L4 -.-> L5

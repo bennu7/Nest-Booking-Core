@@ -1,0 +1,39 @@
+flowchart TD
+    subgraph User["User Actions"]
+        SEARCH[Search Service]
+        BOOK[Book a Slot]
+        PAY[Make Payment]
+        VIEW[View Booking Status]
+    end
+
+    subgraph System["Booking System"]
+        SLOT[Check Available Slots]
+        CONFIRM[Confirm Booking]
+        NOTIFY[Send Notification]
+    end
+
+    subgraph Provider["Provider Side"]
+        ACCEPT[Accept / Confirm Booking]
+        SERVE[Deliver Service]
+        COMPLETE[Mark as Complete]
+    end
+
+    subgraph Payment["Payment"]
+        ONLINE[Online Payment]
+        CASH[Pay at Location]
+        RECEIPT[Send Receipt]
+    end
+
+    SEARCH --> SLOT
+    SLOT --> BOOK
+    BOOK --> CONFIRM
+    CONFIRM --> NOTIFY
+    NOTIFY --> ACCEPT
+    ACCEPT --> VIEW
+    ACCEPT --> SERVE
+    BOOK --> PAY
+    PAY --> ONLINE
+    PAY --> CASH
+    ONLINE --> RECEIPT
+    SERVE --> COMPLETE
+    COMPLETE --> NOTIFY

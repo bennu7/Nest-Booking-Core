@@ -1,0 +1,300 @@
+graph TB
+    subgraph Client["Client Layer"]
+        WEB[Web App]
+        MOBILE[Mobile App]
+        ADMIN[Admin Dashboard]
+    end
+
+    subgraph Gateway["API Gateway"]
+        LB[Rate Limiter + CORS]
+    end
+
+    subgraph NestJS["NestJS Application"]
+
+        subgraph Common["Common Layer"]
+            JWT_GUARD[JWT Auth Guard]
+            ROLE_GUARD[Roles Guard]
+            TENANT_INT[Tenant Context Interceptor]
+            LOG_INT[Logging Interceptor]
+            RESP_INT[Response Transform Interceptor]
+            VALID_PIPE[Validation Pipe]
+            HTTP_FILTER[HTTP Exception Filter]
+        end
+
+        subgraph Auth["Auth Module"]
+            AUTH_CTRL[Auth Controller]
+            AUTH_SVC[Auth Service]
+            JWT_STR[JWT Strategy]
+            GOOGLE_STR[Google Strategy]
+            REFRESH_SVC[Refresh Token Service]
+        end
+
+        subgraph Tenant["Tenant Module"]
+            TENANT_CTRL[Tenant Controller]
+            TENANT_SVC[Tenant Service]
+        end
+
+        subgraph Provider["Provider Module"]
+            PROVIDER_CTRL[Provider Controller]
+            PROVIDER_SVC[Provider Service]
+            SCHED_SVC[Schedule Service]
+        end
+
+        subgraph Booking["Booking Module"]
+            BOOKING_CTRL[Booking Controller]
+            BOOKING_SVC[Booking Service]
+            SLOT_SVC[Slot Service]
+            SLOT_HOLD_SVC[SlotHold Service]
+            BOOKING_GW[Booking Gateway WS]
+        end
+
+        subgraph Payment["Payment Module"]
+            PAYMENT_CTRL[Payment Controller]
+            PAYMENT_SVC[Payment Service]
+            PAYMENT_WEBHOOK[Payment Webhook Controller]
+            PAYMENT_GW_INT[Payment Gateway Interface]
+        end
+
+        subgraph Notification["Notification Module"]
+            NOTIF_SVC[Notification Service]
+            EMAIL_PROC[Email Processor]
+            SMS_PROC[SMS Processor]
+            PUSH_PROC[Push Processor]
+        end
+
+        subgraph Analytics["Analytics Module"]
+            ANALYTICS_RES[Analytics Resolver GraphQL]
+            ANALYTICS_SVC[Analytics Service]
+        end
+
+        subgraph Health["Health Module"]
+            HEALTH_CTRL[Health Controller]
+        end
+
+        subgraph Jobs["Jobs / Cron"]
+            SLOT_CLEAN_JOB[SlotHold Cleanup Job]
+            TOKEN_CLEAN_JOB[Expired Token Cleanup Job]
+            REMINDER_JOB[Booking Reminder Job]
+        end
+
+        subgraph Config["Config Layer"]
+            APP_CFG[App Config]
+            DB_CFG[Database Config]
+            JWT_CFG[JWT Config]
+        end
+    end
+
+    subgraph Queue["BullMQ Queue"]
+        EMAIL_Q[Email Queue]
+        SMS_Q[SMS Queue]
+        PUSH_Q[Push Queue]
+    end
+
+    subgraph External["External Services"]
+        GOOGLE_OAUTH[Google OAuth 2.0]
+        PAYMENT_PG[Payment Gateway Provider]
+        SMTP[SMTP Server]
+        SMS_GW[SMS Gateway]
+        FIREBASE[FCM / Push Service]
+    end
+
+    subgraph Database["PostgreSQL + Prisma"]
+        USER[(User)]
+        TENANT[(Tenant)]
+        PROVIDER_PROF[(ProviderProfile)]
+        SCHEDULE[(ProviderSchedule)]
+        BREAK[(ProviderBreak)]
+        SVC_CAT[(ServiceCategory)]
+        SERVICE[(Service)]
+        BOOKING[(Booking)]
+        STATUS_LOG[(BookingStatusLog)]
+        SLOT_HOLD[(SlotHold)]
+        PAYMENT[(Payment)]
+        NOTIF[(Notification)]
+        REFRESH_TK[(RefreshToken)]
+        IDEMPOTENCY[(IdempotencyKey)]
+        CANCEL_POL[(CancellationPolicy)]
+    end
+
+    subgraph Cache["Redis Cache"]
+        SESSION_CACHE[Session Cache]
+        SLOT_CACHE[Slot Availability Cache]
+        RATE_LIMIT[Rate Limiter State]
+    end
+
+    WEB --> LB
+    MOBILE --> LB
+    ADMIN --> LB
+
+    LB --> AUTH_CTRL
+    LB --> TENANT_CTRL
+    LB --> PROVIDER_CTRL
+    LB --> BOOKING_CTRL
+    LB --> PAYMENT_CTRL
+    LB --> PAYMENT_WEBHOOK
+    LB --> ANALYTICS_RES
+    LB --> HEALTH_CTRL
+
+    AUTH_CTRL -.-> JWT_GUARD
+    TENANT_CTRL -.-> JWT_GUARD
+    PROVIDER_CTRL -.-> JWT_GUARD
+    BOOKING_CTRL -.-> JWT_GUARD
+    PAYMENT_CTRL -.-> JWT_GUARD
+
+    JWT_GUARD --> JWT_STR
+    JWT_GUARD -.-> TENANT_INT
+    TENANT_INT -.-> RESP_INT
+    RESP_INT -.-> LOG_INT
+
+    AUTH_CTRL -->|"POST /auth/register"| AUTH_SVC
+    AUTH_CTRL -->|"POST /auth/login"| AUTH_SVC
+    AUTH_CTRL -->|"POST /auth/refresh"| REFRESH_SVC
+    AUTH_CTRL -->|"POST /auth/logout"| REFRESH_SVC
+    AUTH_CTRL -->|"GET /auth/google"| GOOGLE_STR
+    AUTH_CTRL -->|"GET /auth/callback/google"| GOOGLE_STR
+    AUTH_CTRL -->|"GET /auth/me"| AUTH_SVC
+    AUTH_CTRL -->|"PATCH /auth/users/:id/toggle-status"| AUTH_SVC
+
+    AUTH_SVC -->|"verify password"| USER
+    AUTH_SVC -->|"create JWT"| JWT_CFG
+    AUTH_SVC -->|"store refresh token"| REFRESH_TK
+    AUTH_SVC -->|"check idempotency"| IDEMPOTENCY
+
+    JWT_STR -->|"validate token + load user"| USER
+    JWT_STR -->|"check user isActive"| USER
+    JWT_STR -->|"match tenantId vs DB"| TENANT
+    JWT_STR -->|"check tenant isActive"| TENANT
+
+    GOOGLE_STR -->|"OAuth redirect + callback"| GOOGLE_OAUTH
+    GOOGLE_STR -->|"create/find user"| AUTH_SVC
+
+    REFRESH_SVC -->|"hash + store"| REFRESH_TK
+    REFRESH_SVC -->|"revoke old tokens"| REFRESH_TK
+
+    TENANT_CTRL -->|"GET /tenants"| TENANT_SVC
+    TENANT_CTRL -->|"GET /tenants/:id"| TENANT_SVC
+    TENANT_CTRL -->|"GET /tenants/slug/:slug"| TENANT_SVC
+    TENANT_CTRL -->|"POST /tenants"| TENANT_SVC
+    TENANT_CTRL -->|"PATCH /tenants/:id"| TENANT_SVC
+
+    TENANT_SVC -->|"CRUD + pagination"| TENANT
+    TENANT_SVC -->|"setup policies"| CANCEL_POL
+
+    PROVIDER_CTRL -->|"GET /providers"| PROVIDER_SVC
+    PROVIDER_CTRL -->|"GET /providers/:id"| PROVIDER_SVC
+    PROVIDER_CTRL -->|"POST /providers"| PROVIDER_SVC
+    PROVIDER_CTRL -->|"PATCH /providers/:id"| PROVIDER_SVC
+    PROVIDER_CTRL -->|"GET /providers/:id/slots"| SLOT_SVC
+    PROVIDER_CTRL -->|"PATCH /providers/:id/schedule"| SCHED_SVC
+    PROVIDER_CTRL -->|"POST /providers/:id/breaks"| PROVIDER_SVC
+
+    PROVIDER_SVC -->|"CRUD provider profile"| PROVIDER_PROF
+    PROVIDER_SVC -->|"manage services"| SERVICE
+    PROVIDER_SVC -->|"manage categories"| SVC_CAT
+
+    SCHED_SVC -->|"CRUD weekly schedule"| SCHEDULE
+    SCHED_SVC -->|"manage breaks"| BREAK
+
+    SLOT_SVC -->|"calculate available slots"| SCHEDULE
+    SLOT_SVC -->|"check breaks & holds"| BREAK
+    SLOT_SVC -->|"check holds"| SLOT_HOLD
+    SLOT_SVC -.->|"cache result"| SLOT_CACHE
+
+    BOOKING_CTRL -->|"GET /bookings"| BOOKING_SVC
+    BOOKING_CTRL -->|"GET /bookings/:id"| BOOKING_SVC
+    BOOKING_CTRL -->|"POST /bookings"| BOOKING_SVC
+    BOOKING_CTRL -->|"PATCH /bookings/:id/status"| BOOKING_SVC
+    BOOKING_CTRL -->|"POST /bookings/:id/cancel"| BOOKING_SVC
+    BOOKING_CTRL -->|"POST /bookings/:id/hold"| SLOT_HOLD_SVC
+
+    BOOKING_SVC -->|"create booking"| BOOKING
+    BOOKING_SVC -->|"validate slot availability"| SLOT_SVC
+    BOOKING_SVC -->|"check cancellation policy"| CANCEL_POL
+    BOOKING_SVC -->|"log status change"| STATUS_LOG
+    BOOKING_SVC -->|"trigger notification"| NOTIF_SVC
+    BOOKING_SVC -.->|"broadcast update"| BOOKING_GW
+
+    SLOT_HOLD_SVC -->|"lock slot temporarily"| SLOT_HOLD
+    SLOT_HOLD_SVC -->|"convert to booking"| BOOKING_SVC
+    SLOT_HOLD_SVC -->|"release expired hold"| SLOT_CLEAN_JOB
+
+    BOOKING_GW -.->|"WebSocket updates"| WEB
+    BOOKING_GW -.->|"WebSocket updates"| MOBILE
+
+    PAYMENT_CTRL -->|"POST bookings/:id/payments"| PAYMENT_SVC
+    PAYMENT_CTRL -->|"GET /payments/:id"| PAYMENT_SVC
+    PAYMENT_CTRL -->|"POST /payments/:id/refund"| PAYMENT_SVC
+
+    PAYMENT_SVC -->|"create payment record"| PAYMENT
+    PAYMENT_SVC -->|"call external gateway"| PAYMENT_PG
+    PAYMENT_SVC -->|"update booking status"| BOOKING
+    PAYMENT_SVC -->|"trigger notification"| NOTIF_SVC
+
+    PAYMENT_PG -->|"webhook callback"| PAYMENT_WEBHOOK
+    PAYMENT_WEBHOOK -->|"verify signature"| PAYMENT_PG
+    PAYMENT_WEBHOOK -->|"update payment status"| PAYMENT
+    PAYMENT_WEBHOOK -->|"update booking status"| BOOKING
+    PAYMENT_WEBHOOK -->|"send receipt notification"| NOTIF_SVC
+
+    NOTIF_SVC -->|"queue email"| EMAIL_Q
+    NOTIF_SVC -->|"queue sms"| SMS_Q
+    NOTIF_SVC -->|"queue push"| PUSH_Q
+    NOTIF_SVC -->|"log notification"| NOTIF
+
+    EMAIL_Q -->|"process"| EMAIL_PROC
+    SMS_Q -->|"process"| SMS_PROC
+    PUSH_Q -->|"process"| PUSH_PROC
+
+    EMAIL_PROC -->|"send via SMTP"| SMTP
+    SMS_PROC -->|"send via API"| SMS_GW
+    PUSH_PROC -->|"send via FCM"| FIREBASE
+
+    ANALYTICS_RES -->|"query booking stats"| ANALYTICS_SVC
+    ANALYTICS_RES -->|"query revenue reports"| ANALYTICS_SVC
+    ANALYTICS_RES -->|"query provider performance"| ANALYTICS_SVC
+
+    ANALYTICS_SVC -->|"aggregate from"| BOOKING
+    ANALYTICS_SVC -->|"aggregate from"| PAYMENT
+    ANALYTICS_SVC -->|"aggregate from"| PROVIDER_PROF
+
+    HEALTH_CTRL -->|"db ping"| USER
+    HEALTH_CTRL -->|"queue status"| EMAIL_Q
+    HEALTH_CTRL -->|"cache ping"| SESSION_CACHE
+
+    SLOT_CLEAN_JOB -->|"delete expired holds"| SLOT_HOLD
+    TOKEN_CLEAN_JOB -->|"delete expired tokens"| REFRESH_TK
+    REMINDER_JOB -->|"find upcoming bookings"| BOOKING
+    REMINDER_JOB -->|"queue reminders"| NOTIF_SVC
+
+    AUTH_SVC -.-> JWT_CFG
+    JWT_STR -.-> JWT_CFG
+    PROVIDER_SVC -.-> DB_CFG
+    BOOKING_SVC -.-> DB_CFG
+    PAYMENT_SVC -.-> DB_CFG
+
+    classDef client fill:#e1f5fe,stroke:#0288d1,stroke-width:2px
+    classDef gateway fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef common fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef module fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    classDef queue fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    classDef external fill:#efebe9,stroke:#5d4037,stroke-width:2px
+    classDef database fill:#e0f2f1,stroke:#00695c,stroke-width:2px
+    classDef cache fill:#fffde7,stroke:#f9a825,stroke-width:2px
+    classDef job fill:#f1f8e9,stroke:#689f38,stroke-width:2px
+
+    class WEB,MOBILE,ADMIN client
+    class LB gateway
+    class JWT_GUARD,ROLE_GUARD,TENANT_INT,LOG_INT,RESP_INT,VALID_PIPE,HTTP_FILTER common
+    class AUTH_CTRL,AUTH_SVC,JWT_STR,GOOGLE_STR,REFRESH_SVC module
+    class TENANT_CTRL,TENANT_SVC module
+    class PROVIDER_CTRL,PROVIDER_SVC,SCHED_SVC module
+    class BOOKING_CTRL,BOOKING_SVC,SLOT_SVC,SLOT_HOLD_SVC,BOOKING_GW module
+    class PAYMENT_CTRL,PAYMENT_SVC,PAYMENT_WEBHOOK,PAYMENT_GW_INT module
+    class NOTIF_SVC,EMAIL_PROC,SMS_PROC,PUSH_PROC module
+    class ANALYTICS_RES,ANALYTICS_SVC module
+    class HEALTH_CTRL module
+    class EMAIL_Q,SMS_Q,PUSH_Q queue
+    class GOOGLE_OAUTH,PAYMENT_PG,SMTP,SMS_GW,FIREBASE external
+    class USER,TENANT,PROVIDER_PROF,SCHEDULE,BREAK,SVC_CAT,SERVICE,BOOKING,STATUS_LOG,SLOT_HOLD,PAYMENT,NOTIF,REFRESH_TK,IDEMPOTENCY,CANCEL_POL database
+    class SESSION_CACHE,SLOT_CACHE,RATE_LIMIT cache
+    class SLOT_CLEAN_JOB,TOKEN_CLEAN_JOB,REMINDER_JOB job

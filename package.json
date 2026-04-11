@@ -21,12 +21,14 @@
     "db:status": "./scripts/migration-status.sh",
     "db:empty": "./scripts/create-empty-migration.sh",
     "db:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed.ts",
     "db:dev": "prisma migrate dev",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "NODE_OPTIONS='--experimental-vm-modules' jest --config ./test/jest-e2e.json"
+    "test:e2e": "NODE_OPTIONS='--experimental-vm-modules' jest --config ./test/jest-e2e.json",
+    "sonarqube": "bash scripts/sonarqube.sh"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -88,7 +90,9 @@
       "ts"
     ],
     "rootDir": "src",
-    "setupFilesAfterEnv": ["<rootDir>/jest.setup.ts"],
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest.setup.ts"
+    ],
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"

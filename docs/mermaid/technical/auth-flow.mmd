@@ -1,0 +1,58 @@
+sequenceDiagram
+    participant C as Client
+    participant API as Auth Controller
+    participant SVC as Auth Service
+    participant DB as Database (Prisma)
+    participant JWT as JWT Strategy
+    participant G as Google OAuth
+
+    Note over C,G: Register Local
+    C->>API: POST /auth/register {email, password, fullName}
+    API->>SVC: register(dto)
+    SVC->>DB: check email uniqueness
+    SVC->>SVC: hash password (bcrypt)
+    SVC->>DB: create User + RefreshToken
+    SVC-->>C: {accessToken, refreshToken}
+
+    Note over C,G: Login Local
+    C->>API: POST /auth/login {email, password}
+    API->>SVC: loginWithLocal(dto)
+    SVC->>DB: find User by email
+    SVC->>SVC: verify password
+    SVC->>DB: check isActive
+    SVC->>DB: store RefreshToken (hashed)
+    SVC-->>C: {accessToken, refreshToken, user}
+
+    Note over C,G: Login Google
+    C->>API: GET /auth/google
+    API->>G: redirect to Google consent
+    G-->>API: callback with code
+    API->>G: exchange code to profile
+    G-->>API: {email, name, googleSub}
+    API->>SVC: handleGoogleLogin(profile)
+    SVC->>DB: find AuthProviderRecord(GOOGLE, googleSub)
+    alt user exists
+        SVC->>DB: check isActive
+    else user not found
+        SVC->>DB: create User + AuthProviderRecord
+    end
+    SVC-->>C: {accessToken, refreshToken, user}
+
+    Note over C,G: Refresh Token
+    C->>API: POST /auth/refresh {refreshToken}
+    API->>SVC: refreshTokens(dto)
+    SVC->>DB: find RefreshToken by hash
+    SVC->>SVC: check expired and not revoked
+    SVC->>DB: revoke old token
+    SVC->>DB: create new RefreshToken
+    SVC-->>C: {accessToken, refreshToken}
+
+    Note over C,G: Authenticated Request
+    C->>API: GET /bookings (Header: Bearer accessToken)
+    API->>JWT: validate token
+    JWT->>DB: load user by sub
+    JWT->>DB: check isActive
+    JWT->>DB: match tenantId claim vs DB
+    JWT->>DB: check tenant isActive
+    JWT-->>API: CurrentUserPayload
+    API-->>C: bookings data

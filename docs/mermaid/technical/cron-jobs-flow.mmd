@@ -1,0 +1,27 @@
+flowchart TD
+    subgraph Scheduler["NestJS Schedule / BullMQ Repeatable"]
+        SLOT_JOB[SlotHold Cleanup Job - Every 5 minutes]
+        TOKEN_JOB[Expired Token Cleanup Job - Every 1 hour]
+        REMINDER_JOB[Booking Reminder Job - Every 15 minutes]
+    end
+
+    subgraph SlotCleanup["SlotHold Cleanup"]
+        SH1[Find SlotHold where expiresAt less than now AND isConverted equals false]
+        SH2[Delete expired holds]
+        SH3[Release slot back to availability]
+    end
+
+    subgraph TokenCleanup["Refresh Token Cleanup"]
+        TK1[Find RefreshToken where expiresAt less than now OR revokedAt IS NOT NULL]
+        TK2[Delete expired/revoked tokens]
+    end
+
+    subgraph Reminder["Booking Reminder"]
+        RM1[Find Booking where startTime minus now less than 24 hours]
+        RM2[Check if reminder already sent]
+        RM3[Enqueue notification]
+    end
+
+    SLOT_JOB --> SH1 --> SH2 --> SH3
+    TOKEN_JOB --> TK1 --> TK2
+    REMINDER_JOB --> RM1 --> RM2 --> RM3

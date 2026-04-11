@@ -1,0 +1,60 @@
+flowchart LR
+    subgraph Trigger["Trigger Sources"]
+        BOOKING_EVT[Booking Created/Updated]
+        PAYMENT_EVT[Payment Received/Refunded]
+        REMINDER_EVT[Booking Reminder Job]
+        ADMIN_ACTION[Admin Action]
+    end
+
+    subgraph Enqueue["Notification Service"]
+        NOTIF_SVC[Create Notification Record]
+        EMAIL_Q[Email Queue]
+        SMS_Q[SMS Queue]
+        PUSH_Q[Push Queue]
+        WS_Q[WebSocket Queue]
+    end
+
+    subgraph Process["BullMQ Processors"]
+        EMAIL_P[Email Processor]
+        SMS_P[SMS Processor]
+        PUSH_P[Push Processor]
+    end
+
+    subgraph Deliver["External Delivery"]
+        SMTP[SMTP Server]
+        SMS_GW[SMS Gateway]
+        FCM[FCM / Firebase]
+        WS_CLIENT[Connected WebSocket Clients]
+    end
+
+    subgraph Log["Post-Delivery"]
+        UPDATE_STATUS[Update Notification status]
+        RETRY[Retry on Failure]
+        READ_MARK[Mark as Read]
+    end
+
+    BOOKING_EVT --> NOTIF_SVC
+    PAYMENT_EVT --> NOTIF_SVC
+    REMINDER_EVT --> NOTIF_SVC
+    ADMIN_ACTION --> NOTIF_SVC
+
+    NOTIF_SVC --> EMAIL_Q
+    NOTIF_SVC --> SMS_Q
+    NOTIF_SVC --> PUSH_Q
+    NOTIF_SVC --> WS_Q
+
+    EMAIL_Q --> EMAIL_P --> SMTP
+    SMS_Q --> SMS_P --> SMS_GW
+    PUSH_Q --> PUSH_P --> FCM
+    WS_Q --> WS_CLIENT
+
+    SMTP --> UPDATE_STATUS
+    SMS_GW --> UPDATE_STATUS
+    FCM --> UPDATE_STATUS
+
+    UPDATE_STATUS -->|"failed?"| RETRY
+    RETRY -->|"retry less than max"| EMAIL_Q
+    RETRY -->|"retry less than max"| SMS_Q
+    RETRY -->|"retry less than max"| PUSH_Q
+
+    UPDATE_STATUS -->|"delivered"| READ_MARK

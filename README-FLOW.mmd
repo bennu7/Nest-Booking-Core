@@ -1,0 +1,34 @@
+
+flowchart TD
+    START((Pelanggan Booking)) --> HOLD[Slot Dikunci Sementara 15 menit]
+    HOLD --> CHECK{Slot Tersedia?}
+    CHECK -->|Ya| CREATE[Booking Dibuat - PENDING]
+    CHECK -->|Tidak| EXPIRE[Slot Dilepas - Coba Lagi]
+    EXPIRE --> START
+
+    CREATE --> PAY{Metode Bayar?}
+    PAY -->|Online| PAY_URL[Redirect ke Payment Gateway]
+    PAY -->|Tunai di Tempat| KONFIRMASI[Provider Konfirmasi]
+
+    PAY_URL --> TUNGGU{Pembayaran Berhasil?}
+    TUNGGU -->|Ya| BERHASIL[Pembayaran Berhasil]
+    TUNGGU -->|Tidak| COBA{Coba Lagi?}
+    COBA -->|Ya| PAY_URL
+    COBA -->|Tidak| BATAL[Booking Dibatalkan]
+    BATAL --> START
+
+    BERHASIL --> KONFIRMASI
+    KONFIRMASI --> SELESAI{Provider Tandai Selesai}
+    SELESAI -->|Ya| DONE[Booking Selesai]
+    SELESAI -->|Tidak| TUNGGU_LAYANAN[Menunggu Provider]
+
+    TUNGGU_LAYANAN --> BATL{Pelanggan Batal?}
+    BATL -->|Ya| KEBIJAKAN{Dalam Periode Gratis?}
+    KEBIJAKAN -->|Ya| GRATIS[Batal Tanpa Biaya]
+    KEBIJAKAN -->|Tidak| DENDA[Denda Keterlambatan]
+    BATL -->|Tidak| SELESAI
+
+    DONE --> NOTIF[Kirim Konfirmasi]
+    GRATIS --> NOTIF
+    DENDA --> NOTIF
+    NOTIF --> END((Selesai))

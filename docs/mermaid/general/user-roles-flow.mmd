@@ -1,0 +1,50 @@
+flowchart LR
+    subgraph Customer["Customer"]
+        C1[Register and Login]
+        C2[Browse Services]
+        C3[Book a Slot]
+        C4[Pay Online or Cash]
+        C5[View Booking Status]
+        C6[Cancel or Reschedule]
+    end
+
+    subgraph Provider["Service Provider"]
+        P1[Manage Schedule]
+        P2[Set Available Services]
+        P3[Confirm Booking]
+        P4[Deliver Service]
+        P5[Mark Complete]
+    end
+
+    subgraph Admin["Business Admin"]
+        A1[Manage Tenant Settings]
+        A2[Manage Providers]
+        A3[Monitor Bookings]
+        A4[Set Cancellation Policy]
+        A5[View Reports]
+    end
+
+    subgraph System["System"]
+        S1[Auto Notifications]
+        S2[Slot Availability]
+        S3[Payment Processing]
+        S4[Auto Cleanup Expired Slots]
+    end
+
+    C1 --> C2
+    C2 --> C3
+    C3 --> S2
+    S2 --> C4
+    C4 --> S3
+    S3 --> P3
+    P3 --> C5
+    C5 --> C6
+    P1 --> S2
+    P2 --> C2
+    P4 --> P5
+    P5 --> S1
+    A1 --> S1
+    A2 --> P1
+    A3 --> A5
+    A4 --> C6
+    S4 --> S2

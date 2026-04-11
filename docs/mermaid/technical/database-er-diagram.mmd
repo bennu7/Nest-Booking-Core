@@ -1,0 +1,195 @@
+erDiagram
+    Tenant ||--o{ User : "has"
+    Tenant ||--o{ ProviderProfile : "has"
+    Tenant ||--o{ ServiceCategory : "has"
+    Tenant ||--o{ Booking : "has"
+    Tenant ||--o{ Payment : "has"
+    Tenant ||--o{ Notification : "has"
+    Tenant ||--o{ SlotHold : "has"
+    Tenant ||--o{ CancellationPolicy : "has"
+
+    User ||--o{ Booking : "makes as customer"
+    User ||--o| ProviderProfile : "is provider"
+    User ||--o{ RefreshToken : "has"
+    User ||--o{ Notification : "receives"
+    User ||--o{ SlotHold : "creates"
+    User ||--o{ IdempotencyKey : "has"
+    User }o--o| User : "disabled by"
+
+    ProviderProfile ||--o{ ProviderSchedule : "has"
+    ProviderProfile ||--o{ ProviderBreak : "has"
+    ProviderProfile ||--o{ Service : "offers"
+    ProviderProfile ||--o{ Booking : "receives as provider"
+    ProviderProfile ||--o{ SlotHold : "is held for"
+
+    ServiceCategory ||--o{ Service : "categorizes"
+
+    Service ||--o{ Booking : "is booked"
+    Service ||--o{ SlotHold : "is held"
+
+    Booking ||--o{ BookingStatusLog : "has audit trail"
+    Booking ||--o{ Payment : "has payments"
+    Booking ||--o{ Notification : "triggers"
+
+    Booking }o--o| User : "cancelled by"
+    Booking ||--|| Tenant : "belongs to"
+
+    Tenant {
+        string id PK
+        string name
+        string slug UK
+        string email
+        string timezone
+        boolean isActive
+        json settings
+    }
+
+    User {
+        string id PK
+        string tenantId FK
+        string email
+        string passwordHash
+        string fullName
+        UserRole role
+        AuthProvider authProvider
+        string authProviderId
+        boolean isActive
+    }
+
+    ProviderProfile {
+        string id PK
+        string userId FK
+        string tenantId FK
+        string bio
+        decimal ratingAvg
+        int totalReviews
+        boolean isAvailable
+    }
+
+    ProviderSchedule {
+        string id PK
+        string providerId FK
+        int dayOfWeek
+        time startTime
+        time endTime
+        boolean isActive
+    }
+
+    ProviderBreak {
+        string id PK
+        string providerId FK
+        int dayOfWeek
+        date dateStart
+        date dateEnd
+        string reason
+        boolean isRecurring
+    }
+
+    ServiceCategory {
+        string id PK
+        string tenantId FK
+        string name
+        int sortOrder
+        boolean isActive
+    }
+
+    Service {
+        string id PK
+        string providerId FK
+        string categoryId FK
+        string name
+        int durationMinutes
+        int bufferMinutes
+        decimal price
+        int maxCapacity
+        boolean isActive
+    }
+
+    Booking {
+        string id PK
+        string tenantId FK
+        string customerId FK
+        string providerId FK
+        string serviceId FK
+        datetime startTime
+        datetime endTime
+        BookingStatus status
+        decimal totalPrice
+        int version
+    }
+
+    BookingStatusLog {
+        string id PK
+        string bookingId FK
+        BookingStatus previousStatus
+        BookingStatus newStatus
+        string changedBy
+        string changeReason
+        json metadata
+    }
+
+    SlotHold {
+        string id PK
+        string tenantId FK
+        string providerId FK
+        string customerId FK
+        string serviceId FK
+        datetime startTime
+        datetime endTime
+        datetime expiresAt
+        boolean isConverted
+    }
+
+    Payment {
+        string id PK
+        string bookingId FK
+        string tenantId FK
+        decimal amount
+        PaymentMethod paymentMethod
+        PaymentStatus status
+        string externalRef
+        datetime paidAt
+    }
+
+    Notification {
+        string id PK
+        string tenantId FK
+        string userId FK
+        string bookingId FK
+        NotificationChannel channel
+        string title
+        string body
+        NotificationStatus status
+        int retryCount
+    }
+
+    RefreshToken {
+        string id PK
+        string userId FK
+        string tokenHash UK
+        string userAgent
+        string ipAddress
+        datetime expiresAt
+        datetime revokedAt
+    }
+
+    CancellationPolicy {
+        string id PK
+        string tenantId FK
+        string name
+        int hoursBeforeFree
+        decimal lateCancelCharge
+        decimal noShowCharge
+        boolean isDefault
+    }
+
+    IdempotencyKey {
+        string id PK
+        string key UK
+        string userId FK
+        string requestPath
+        string requestHash
+        int responseCode
+        json responseBody
+        datetime expiresAt
+    }

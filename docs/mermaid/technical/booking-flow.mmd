@@ -1,0 +1,68 @@
+sequenceDiagram
+    participant C as Client
+    participant API as Booking Controller
+    participant BSVC as Booking Service
+    participant SSVC as Slot Service
+    participant SHSVC as SlotHold Service
+    participant PSVC as Payment Service
+    participant PW as Payment Webhook
+    participant DB as Database
+    participant Q as BullMQ Queue
+    participant WS as WebSocket Gateway
+    participant PG as Payment Gateway
+
+    Note over C,WS: Step 1 - Check Availability
+    C->>API: GET /providers/:id/slots?date=2026-04-15
+    API->>SSVC: getAvailableSlots(providerId, date)
+    SSVC->>DB: load ProviderSchedule
+    SSVC->>DB: load ProviderBreaks
+    SSVC->>DB: load existing Bookings
+    SSVC->>DB: load active SlotHolds
+    SSVC->>SSVC: calculate free slots
+    SSVC-->>C: [{startTime, endTime, available}]
+
+    Note over C,WS: Step 2 - Hold Slot
+    C->>API: POST /bookings/hold {providerId, serviceId, startTime, endTime}
+    API->>SHSVC: holdSlot(dto, userId)
+    SHSVC->>DB: check slot still available
+    SHSVC->>DB: create SlotHold (expiresAt = now + 15min)
+    SHSVC-->>C: {holdId, expiresAt}
+
+    Note over C,WS: Step 3 - Create Booking
+    C->>API: POST /bookings {providerId, serviceId, startTime, endTime, holdId}
+    API->>BSVC: createBooking(dto, userId)
+    BSVC->>DB: verify SlotHold exists and not expired
+    BSVC->>DB: check cancellation policy
+    BSVC->>DB: create Booking (PENDING)
+    BSVC->>DB: log status change to STATUS_LOG
+    BSVC->>DB: mark SlotHold as converted
+    BSVC->>Q: enqueue booking confirmation notification
+    BSVC->>WS: broadcast new booking event
+    BSVC-->>C: {booking, status: PENDING}
+
+    Note over C,WS: Step 4 - Confirm Booking
+    C->>API: PATCH /bookings/:id/status {status: CONFIRMED}
+    API->>BSVC: updateStatus(bookingId, status)
+    BSVC->>DB: validate status transition
+    BSVC->>DB: update Booking status
+    BSVC->>DB: log status change to STATUS_LOG
+    BSVC->>Q: enqueue confirmation notification
+    BSVC->>WS: broadcast booking confirmed event
+    BSVC-->>C: {booking, status: CONFIRMED}
+
+    Note over C,WS: Step 5 - Payment
+    C->>API: POST /bookings/:id/payments {method: E_WALLET}
+    API->>PSVC: create payment
+    PSVC->>DB: create Payment (PENDING)
+    PSVC->>PG: call payment gateway
+    PG-->>PSVC: payment URL
+    PSVC-->>C: {paymentUrl}
+
+    Note over C,WS: Step 6 - Payment Webhook
+    PG->>PW: POST /payments/webhook {transaction_status, order_id}
+    PW->>PG: verify signature
+    PW->>DB: update Payment status
+    PW->>DB: update Booking (if paid then CONFIRMED)
+    PW->>Q: enqueue payment receipt notification
+    PW->>WS: broadcast payment received event
+    PW-->>PG: {status: OK}

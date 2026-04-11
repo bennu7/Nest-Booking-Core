@@ -22,7 +22,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"owner@bisnis.com\",\n    \"password\": \"password123\",\n    \"fullName\": \"John Owner\",\n    \"phone\": \"08123456789\"\n}",
+              "raw": "{\n    \"email\": \"customer@example.com\",\n    \"password\": \"password123\",\n    \"fullName\": \"John Customer\",\n    \"phone\": \"081234567890\",\n    \"role\": \"CUSTOMER\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -35,7 +35,40 @@
               "path": ["api", "v1", "auth", "register"]
             }
           },
-          "response": []
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"customer@example.com\",\n    \"password\": \"password123\",\n    \"fullName\": \"John Customer\"\n}"
+                },
+                "url": {
+                  "raw": "{{url}}/api/v1/auth/register",
+                  "host": ["{{url}}"],
+                  "path": ["api", "v1", "auth", "register"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 201,\n    \"message\": \"Success\",\n    \"timestamp\": \"2026-04-11T10:00:00.000Z\",\n    \"data\": {\n        \"accessToken\": \"<token>\",\n        \"refreshToken\": \"<token>\",\n        \"user\": {\n            \"id\": \"uuid\",\n            \"email\": \"customer@example.com\",\n            \"fullName\": \"John Customer\",\n            \"role\": \"CUSTOMER\",\n            \"isActive\": true\n        }\n    }\n}"
+            }
+          ]
         },
         {
           "name": "login",
@@ -49,7 +82,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"superadmin@booking.com\",\n    \"password\": \"SuperAdmin123!\"\n}",
+              "raw": "{\n    \"email\": \"owner@bisnis.com\",\n    \"password\": \"password123\",\n    \"tenantId\": \"tenant-uuid-here\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -155,7 +188,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"name\": \"Bisnis Saya\",\n    \"slug\": \"bisnis-saya\",\n    \"email\": \"owner@bisnis.com\",\n    \"phone\": \"08123456789\",\n    \"timezone\": \"Asia/Jakarta\"\n}",
+              "raw": "{\n    \"name\": \"Bisnis Saya\",\n    \"slug\": \"bisnis-saya\",\n    \"email\": \"owner@bisnis.com\",\n    \"phone\": \"08123456789\",\n    \"timezone\": \"Asia/Jakarta\",\n    \"address\": \"Jl. Contoh No. 123, Jakarta\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -294,7 +327,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"name\": \"Tenant Baru\",\n    \"slug\": \"tenant-baru\",\n    \"email\": \"tenant@bisnis.com\",\n    \"phone\": \"08123456789\",\n    \"timezone\": \"Asia/Jakarta\"\n}",
+              "raw": "{\n    \"name\": \"Tenant Baru\",\n    \"slug\": \"tenant-baru\",\n    \"email\": \"tenant@bisnis.com\",\n    \"phone\": \"08123456789\",\n    \"timezone\": \"Asia/Jakarta\",\n    \"address\": \"Jl. Contoh No. 456\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -305,6 +338,41 @@
               "raw": "{{url}}/api/v1/tenants",
               "host": ["{{url}}"],
               "path": ["api", "v1", "tenants"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "list tenants (paginated)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/v1/tenants?page=1&limit=10",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "tenants"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Items per page (default: 10)"
+                }
+              ]
             }
           },
           "response": []
@@ -368,6 +436,49 @@
           "response": []
         },
         {
+          "name": "update tenant profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated Tenant Name\",\n    \"email\": \"updated@bisnis.com\",\n    \"phone\": \"08123456789\",\n    \"address\": \"Jl. Baru No. 789\",\n    \"timezone\": \"Asia/Makassar\",\n    \"logoUrl\": \"https://example.com/logo.png\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/api/v1/tenants/:id",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "tenants", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "toggle tenant status",
           "request": {
             "auth": {
@@ -409,6 +520,720 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "list categories",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/v1/tenants/categories",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "tenants", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "create category",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Haircut\",\n    \"description\": \"Hair styling and cutting services\",\n    \"sortOrder\": 1,\n    \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/api/v1/tenants/categories",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "tenants", "categories"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update category",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Hair Care & Styling\",\n    \"sortOrder\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/api/v1/tenants/categories/:id",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "tenants", "categories", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete category",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/v1/tenants/categories/:id",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "tenants", "categories", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "provider",
+      "item": [
+        {
+          "name": "create provider",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"userId\": \"user-uuid-here\",\n    \"bio\": \"Experienced barber with 5+ years of expertise\",\n    \"specialization\": \"Haircut and styling\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/api/v1/providers",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "providers"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "list providers",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/v1/providers",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "providers"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get provider by id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/v1/providers/:id",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "providers", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update provider",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"bio\": \"Updated bio description\",\n    \"specialization\": \"Coloring and highlights\",\n    \"isAvailable\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/api/v1/providers/:id",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "providers", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "create service",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Classic Haircut\",\n    \"description\": \"Wash, cut, and style\",\n    \"durationMinutes\": 45,\n    \"bufferMinutes\": 15,\n    \"price\": 150000,\n    \"currency\": \"IDR\",\n    \"maxCapacity\": 1,\n    \"categoryId\": \"category-uuid-here\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/api/v1/providers/:id/services",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "providers", ":id", "services"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "list provider services",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/v1/providers/:id/services",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "providers", ":id", "services"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update service",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Premium Haircut\",\n    \"durationMinutes\": 60,\n    \"price\": 250000,\n    \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/api/v1/providers/:providerId/services/:serviceId",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "providers", ":providerId", "services", ":serviceId"],
+              "variable": [
+                {
+                  "key": "providerId",
+                  "value": ""
+                },
+                {
+                  "key": "serviceId",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete service",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/v1/providers/:providerId/services/:serviceId",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "providers", ":providerId", "services", ":serviceId"],
+              "variable": [
+                {
+                  "key": "providerId",
+                  "value": ""
+                },
+                {
+                  "key": "serviceId",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "update schedule",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"days\": [\n        { \"dayOfWeek\": 1, \"startTime\": \"2026-01-01T09:00:00.000Z\", \"endTime\": \"2026-01-01T17:00:00.000Z\", \"isActive\": true },\n        { \"dayOfWeek\": 2, \"startTime\": \"2026-01-01T09:00:00.000Z\", \"endTime\": \"2026-01-01T17:00:00.000Z\", \"isActive\": true },\n        { \"dayOfWeek\": 3, \"startTime\": \"2026-01-01T09:00:00.000Z\", \"endTime\": \"2026-01-01T17:00:00.000Z\", \"isActive\": true },\n        { \"dayOfWeek\": 4, \"startTime\": \"2026-01-01T09:00:00.000Z\", \"endTime\": \"2026-01-01T17:00:00.000Z\", \"isActive\": true },\n        { \"dayOfWeek\": 5, \"startTime\": \"2026-01-01T09:00:00.000Z\", \"endTime\": \"2026-01-01T17:00:00.000Z\", \"isActive\": true }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/api/v1/providers/:id/schedule",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "providers", ":id", "schedule"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "get provider schedule",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/v1/providers/:id/schedule",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "providers", ":id", "schedule"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "create break (recurring)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"dayOfWeek\": 1,\n    \"breakStart\": \"2026-01-01T12:00:00.000Z\",\n    \"breakEnd\": \"2026-01-01T13:00:00.000Z\",\n    \"reason\": \"Lunch break\",\n    \"isRecurring\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/api/v1/providers/:id/breaks",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "providers", ":id", "breaks"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "create break (one-time)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"dateStart\": \"2026-05-01T00:00:00.000Z\",\n    \"dateEnd\": \"2026-05-03T00:00:00.000Z\",\n    \"reason\": \"Holiday\",\n    \"isRecurring\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/api/v1/providers/:id/breaks",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "providers", ":id", "breaks"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "delete break",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/v1/providers/:providerId/breaks/:breakId",
+              "host": ["{{url}}"],
+              "path": ["api", "v1", "providers", ":providerId", "breaks", ":breakId"],
+              "variable": [
+                {
+                  "key": "providerId",
+                  "value": ""
+                },
+                {
+                  "key": "breakId",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "health",
+      "item": [
+        {
+          "name": "basic health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/health",
+              "host": ["{{url}}"],
+              "path": ["health"]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/health",
+                  "host": ["{{url}}"],
+                  "path": ["health"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 200,\n    \"message\": \"Success\",\n    \"timestamp\": \"2026-04-11T10:00:00.000Z\",\n    \"data\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "readiness check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/health/ready",
+              "host": ["{{url}}"],
+              "path": ["health", "ready"]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/health/ready",
+                  "host": ["{{url}}"],
+                  "path": ["health", "ready"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 200,\n    \"message\": \"Service is ready\",\n    \"timestamp\": \"2026-04-11T10:00:00.000Z\",\n    \"data\": {\n        \"status\": \"ready\"\n    }\n}"
+            },
+            {
+              "name": "503 Service Unavailable",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/health/ready",
+                  "host": ["{{url}}"],
+                  "path": ["health", "ready"]
+                }
+              },
+              "status": "Service Unavailable",
+              "code": 503,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 503,\n    \"message\": \"Database Not Connected\",\n    \"error\": \"Service Unavailable\"\n}"
+            }
+          ]
         }
       ]
     }

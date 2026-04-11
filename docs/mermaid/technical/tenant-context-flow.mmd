@@ -1,0 +1,23 @@
+sequenceDiagram
+    participant C as Client
+    participant Guard as JWT Auth Guard
+    participant Tenant as TenantContext Interceptor
+    participant Ctrl as Any Controller
+    participant DB as Database (Prisma)
+
+    C->>Guard: GET /bookings (Bearer token)
+    Guard->>Guard: decode and verify JWT
+    Guard->>DB: load user by sub
+    Guard->>DB: check user.isActive
+    Guard->>DB: check tenant.isActive (if user has tenantId)
+    Guard->>Guard: attach CurrentUserPayload to request
+
+    Guard->>Tenant: request with user context
+    Tenant->>Tenant: extract user.tenantId
+    Tenant->>Tenant: set request.tenantId
+
+    Tenant->>Ctrl: request with tenant context
+    Ctrl->>DB: query with tenantId filter
+    Ctrl-->>Tenant: response
+    Tenant->>Tenant: ResponseTransformInterceptor
+    Tenant-->>C: {success: true, data: {...}}

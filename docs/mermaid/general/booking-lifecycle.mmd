@@ -1,0 +1,33 @@
+flowchart TD
+    START((Customer Books)) --> HOLD[Slot Temporarily Held 15 min]
+    HOLD --> CHECK{Slot Available?}
+    CHECK -->|Yes| CREATE[Booking Created - PENDING]
+    CHECK -->|No| EXPIRE[Slot Released]
+    EXPIRE --> START
+
+    CREATE --> PAY{Payment Method?}
+    PAY -->|Online| PAY_URL[Redirect to Payment Gateway]
+    PAY -->|Cash| CONFIRM[Provider Confirms]
+
+    PAY_URL --> WAIT{Payment Success?}
+    WAIT -->|Yes| PAY_OK[Payment Marked Success]
+    WAIT -->|No| RETRY{Retry?}
+    RETRY -->|Yes| PAY_URL
+    RETRY -->|No| CANCEL[Booking Cancelled]
+    CANCEL --> START
+
+    PAY_OK --> CONFIRM
+    CONFIRM --> SERVED{Provider Marks Complete}
+    SERVED -->|Yes| DONE[Booking Completed]
+    SERVED -->|No| WAIT_SVC[Waiting for Provider]
+
+    WAIT_SVC --> CANCEL_REQUEST{Customer Cancels?}
+    CANCEL_REQUEST -->|Yes| POLICY{Within Free Period?}
+    POLICY -->|Yes| FREE[Cancelled - No Charge]
+    POLICY -->|No| CHARGE[Cancelled - Late Fee Applied]
+    CANCEL_REQUEST -->|No| SERVED
+
+    DONE --> NOTIF[Send Confirmation]
+    FREE --> NOTIF
+    CHARGE --> NOTIF
+    NOTIF --> END((End))
