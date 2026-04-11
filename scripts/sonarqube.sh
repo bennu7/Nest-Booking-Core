@@ -1,4 +1,25 @@
 #!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+ENV_FILE="$PROJECT_ROOT/.env"
+
+if [ -f "$ENV_FILE" ]; then
+  # Export semua variabel dari .env (format KEY=value) agar SONARQUBE_TOKEN tersedia
+  set -a
+  # shellcheck disable=SC1091
+  source "$ENV_FILE"
+  set +a
+else
+  echo "⚠️  File .env tidak ditemukan: $ENV_FILE"
+  echo "   Set SONARQUBE_TOKEN di environment atau buat .env di root proyek."
+fi
+
+if [ -z "${SONARQUBE_TOKEN:-}" ]; then
+  echo "❌ SONARQUBE_TOKEN kosong. Tambahkan di .env atau: export SONARQUBE_TOKEN=..."
+  exit 1
+fi
 
 SONAR_SCANNER_BIN="$HOME/sonar-scanner-6.2.1/bin/sonar-scanner"
 
@@ -11,10 +32,12 @@ if [ ! -f "$SONAR_SCANNER_BIN" ]; then
   exit 1
 fi
 
+cd "$PROJECT_ROOT"
+
 echo "🔍 Menjalankan SonarQube analysis..."
 
-$SONAR_SCANNER_BIN \
+"$SONAR_SCANNER_BIN" \
   -Dsonar.projectKey=Nest-Booking-Core \
   -Dsonar.sources=. \
   -Dsonar.host.url=http://localhost:9000 \
-  -Dsonar.token=sqp_646a2a99dfc51ee0d5989745d3b18972a3fa27c1
+  -Dsonar.token="$SONARQUBE_TOKEN"
