@@ -408,7 +408,7 @@ export class AuthService {
     const match = /^(\d+)(d)?$/.exec(expiresIn);
 
     if (match) {
-      const value = parseInt(match[1], 10);
+      const value = Number.parseInt(match[1], 10);
 
       now.setDate(now.getDate() + value);
       return now;

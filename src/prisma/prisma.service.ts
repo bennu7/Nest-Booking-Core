@@ -73,7 +73,6 @@ export class PrismaService
         });
       }
 
-      // await this.$queryRaw`SELECT 1`;
       console.log(`\t ✅ Database connected and verified`);
     } catch (err) {
       console.error(`\t ❌ Databasen connection FAILED!!`);
