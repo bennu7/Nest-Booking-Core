@@ -1,10 +1,10 @@
 {
   "info": {
-    "_postman_id": "eb8260d3-504a-4cd3-9e7c-4f2632e4dc16",
+    "_postman_id": "b92b08d0-c208-4746-8400-0de791098920",
     "name": "nest booking core",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "25296096",
-    "_collection_link": "https://go.postman.co/collection/25296096-eb8260d3-504a-4cd3-9e7c-4f2632e4dc16?source=collection_link"
+    "_collection_link": "https://go.postman.co/collection/25296096-b92b08d0-c208-4746-8400-0de791098920?source=collection_link"
   },
   "item": [
     {
@@ -22,7 +22,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"customer@example.com\",\n    \"password\": \"password123\",\n    \"fullName\": \"John Customer\",\n    \"phone\": \"081234567890\",\n    \"role\": \"CUSTOMER\"\n}",
+              "raw": "{\n    \"email\": \"customer1@example.com\",\n    \"password\": \"password123\",\n    \"fullName\": \"John Customer\",\n    \"phone\": \"081234567890\",\n    \"role\": \"CUSTOMER\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -31,8 +31,15 @@
             },
             "url": {
               "raw": "{{url}}/api/v1/auth/register",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "auth", "register"]
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
             }
           },
           "response": [
@@ -52,8 +59,15 @@
                 },
                 "url": {
                   "raw": "{{url}}/api/v1/auth/register",
-                  "host": ["{{url}}"],
-                  "path": ["api", "v1", "auth", "register"]
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "register"
+                  ]
                 }
               },
               "status": "Created",
@@ -72,6 +86,36 @@
         },
         {
           "name": "login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Parse response body menjadi JSON",
+                  "const response = pm.response.json();",
+                  "",
+                  "// Pastikan status code sukses sebelum menyimpan variable",
+                  "if (pm.response.code === 200) {",
+                  "    ",
+                  "    // Ambil token dari path data",
+                  "    const accessToken = response.data.accessToken;",
+                  "    const refreshToken = response.data.refreshToken;",
+                  "",
+                  "    // Set ke Environment Variables",
+                  "    pm.environment.set(\"accessToken\", accessToken);",
+                  "    pm.environment.set(\"refreshToken\", refreshToken);",
+                  "",
+                  "    console.log(\"Token berhasil disimpan!\");",
+                  "} else {",
+                  "    console.warn(\"Gagal menyimpan token: Status code bukan 200\");",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -82,7 +126,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"email\": \"owner@bisnis.com\",\n    \"password\": \"password123\",\n    \"tenantId\": \"tenant-uuid-here\"\n}",
+              "raw": "{\n    \"email\": \"superadmin@booking.com\",\n    \"password\": \"SuperAdmin123!\"\n    // \"tenantId\": \"68e0b578-e0b7-4392-a9e0-b983ff764840\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -91,8 +135,15 @@
             },
             "url": {
               "raw": "{{url}}/api/v1/auth/login",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "auth", "login"]
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
             }
           },
           "response": [
@@ -112,8 +163,15 @@
                 },
                 "url": {
                   "raw": "{{url}}/api/v1/auth/login",
-                  "host": ["{{url}}"],
-                  "path": ["api", "v1", "auth", "login"]
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "login"
+                  ]
                 }
               },
               "status": "OK",
@@ -148,8 +206,15 @@
                 },
                 "url": {
                   "raw": "{{url}}/api/v1/auth/login",
-                  "host": ["{{url}}"],
-                  "path": ["api", "v1", "auth", "login"]
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "login"
+                  ]
                 }
               },
               "status": "Unauthorized",
@@ -197,8 +262,15 @@
             },
             "url": {
               "raw": "{{url}}/api/v1/auth/setup-tenant",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "auth", "setup-tenant"]
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "setup-tenant"
+              ]
             }
           },
           "response": []
@@ -234,8 +306,17 @@
             },
             "url": {
               "raw": "{{url}}/api/v1/auth/users/:id/status",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "auth", "users", ":id", "status"],
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "users",
+                ":id",
+                "status"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -267,8 +348,15 @@
             },
             "url": {
               "raw": "{{url}}/api/v1/auth/refresh-token",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "auth", "refresh-token"]
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "refresh-token"
+              ]
             }
           },
           "response": []
@@ -294,8 +382,15 @@
             },
             "url": {
               "raw": "{{url}}/api/v1/auth/logout",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "auth", "logout"]
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "logout"
+              ]
             }
           },
           "response": []
@@ -336,8 +431,14 @@
             },
             "url": {
               "raw": "{{url}}/api/v1/tenants",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "tenants"]
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants"
+              ]
             }
           },
           "response": []
@@ -359,8 +460,14 @@
             "header": [],
             "url": {
               "raw": "{{url}}/api/v1/tenants?page=1&limit=10",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "tenants"],
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants"
+              ],
               "query": [
                 {
                   "key": "page",
@@ -375,7 +482,73 @@
               ]
             }
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/v1/tenants?page=1&limit=10",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "tenants"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1",
+                      "description": "Page number (default: 1)"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10",
+                      "description": "Items per page (default: 10)"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": null,
+              "header": [
+                {
+                  "key": "X-Powered-By",
+                  "value": "Express"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "504"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"1f8-MRpZKCKhFHBZUbVEQKBDFUEv3/g\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Sun, 12 Apr 2026 10:00:25 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 200,\n    \"message\": \"Success\",\n    \"timestamp\": \"2026-04-12T10:00:25.568Z\",\n    \"data\": {\n        \"items\": [\n            {\n                \"id\": \"68e0b578-e0b7-4392-a9e0-b983ff764840\",\n                \"name\": \"Bisnis Saya\",\n                \"slug\": \"bisnis-saya\",\n                \"email\": \"owner@bisnis.com\",\n                \"phone\": \"08123456789\",\n                \"address\": \"Jl. Contoh No. 123, Jakarta\",\n                \"timezone\": \"Asia/Jakarta\",\n                \"logoUrl\": null,\n                \"isActive\": true,\n                \"disabledReason\": null,\n                \"disabledAt\": null,\n                \"disabledBy\": null,\n                \"settings\": {},\n                \"createdAt\": \"2026-04-11T19:36:47.667Z\",\n                \"updatedAt\": \"2026-04-11T19:36:47.667Z\"\n            }\n        ],\n        \"total\": 1,\n        \"page\": 1,\n        \"limit\": 10\n    }\n}"
+            }
+          ]
         },
         {
           "name": "get tenant by id",
@@ -393,18 +566,76 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{url}}/api/v1/tenants/:id",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "tenants", ":id"],
-              "variable": [
-                {
-                  "key": "id",
-                  "value": ""
-                }
+              "raw": "{{url}}/api/v1/tenants/68e0b578-e0b7-4392-a9e0-b983ff764840",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "68e0b578-e0b7-4392-a9e0-b983ff764840"
               ]
             }
           },
-          "response": []
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/v1/tenants/68e0b578-e0b7-4392-a9e0-b983ff764840",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "tenants",
+                    "68e0b578-e0b7-4392-a9e0-b983ff764840"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "X-Powered-By",
+                  "value": "Express"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json",
+                  "description": "",
+                  "type": "text"
+                },
+                {
+                  "key": "Content-Length",
+                  "value": "462"
+                },
+                {
+                  "key": "ETag",
+                  "value": "W/\"1ce-MBa13yYW+25rj4kXnKyD15jTS3g\""
+                },
+                {
+                  "key": "Date",
+                  "value": "Sun, 12 Apr 2026 10:00:56 GMT"
+                },
+                {
+                  "key": "Connection",
+                  "value": "keep-alive"
+                },
+                {
+                  "key": "Keep-Alive",
+                  "value": "timeout=5"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 200,\n    \"message\": \"Success\",\n    \"timestamp\": \"2026-04-12T10:00:56.607Z\",\n    \"data\": {\n        \"id\": \"68e0b578-e0b7-4392-a9e0-b983ff764840\",\n        \"name\": \"Bisnis Saya\",\n        \"slug\": \"bisnis-saya\",\n        \"email\": \"owner@bisnis.com\",\n        \"phone\": \"08123456789\",\n        \"address\": \"Jl. Contoh No. 123, Jakarta\",\n        \"timezone\": \"Asia/Jakarta\",\n        \"logoUrl\": null,\n        \"isActive\": true,\n        \"disabledReason\": null,\n        \"disabledAt\": null,\n        \"disabledBy\": null,\n        \"settings\": {},\n        \"createdAt\": \"2026-04-11T19:36:47.667Z\",\n        \"updatedAt\": \"2026-04-11T19:36:47.667Z\"\n    }\n}"
+            }
+          ]
         },
         {
           "name": "get tenant by slug",
@@ -423,8 +654,16 @@
             "header": [],
             "url": {
               "raw": "{{url}}/api/v1/tenants/slug/:slug",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "tenants", "slug", ":slug"],
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "slug",
+                ":slug"
+              ],
               "variable": [
                 {
                   "key": "slug",
@@ -466,8 +705,15 @@
             },
             "url": {
               "raw": "{{url}}/api/v1/tenants/:id",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "tenants", ":id"],
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                ":id"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -509,8 +755,16 @@
             },
             "url": {
               "raw": "{{url}}/api/v1/tenants/:id/status",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "tenants", ":id", "status"],
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                ":id",
+                "status"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -538,8 +792,15 @@
             "header": [],
             "url": {
               "raw": "{{url}}/api/v1/tenants/categories",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "tenants", "categories"]
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "categories"
+              ]
             }
           },
           "response": []
@@ -575,8 +836,15 @@
             },
             "url": {
               "raw": "{{url}}/api/v1/tenants/categories",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "tenants", "categories"]
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "categories"
+              ]
             }
           },
           "response": []
@@ -612,8 +880,16 @@
             },
             "url": {
               "raw": "{{url}}/api/v1/tenants/categories/:id",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "tenants", "categories", ":id"],
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "categories",
+                ":id"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -641,8 +917,16 @@
             "header": [],
             "url": {
               "raw": "{{url}}/api/v1/tenants/categories/:id",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "tenants", "categories", ":id"],
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "tenants",
+                "categories",
+                ":id"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -689,8 +973,14 @@
             },
             "url": {
               "raw": "{{url}}/api/v1/providers",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "providers"]
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "providers"
+              ]
             }
           },
           "response": []
@@ -712,8 +1002,14 @@
             "header": [],
             "url": {
               "raw": "{{url}}/api/v1/providers",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "providers"]
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "providers"
+              ]
             }
           },
           "response": []
@@ -735,8 +1031,15 @@
             "header": [],
             "url": {
               "raw": "{{url}}/api/v1/providers/:id",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "providers", ":id"],
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "providers",
+                ":id"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -778,8 +1081,15 @@
             },
             "url": {
               "raw": "{{url}}/api/v1/providers/:id",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "providers", ":id"],
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "providers",
+                ":id"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -821,8 +1131,16 @@
             },
             "url": {
               "raw": "{{url}}/api/v1/providers/:id/services",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "providers", ":id", "services"],
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "providers",
+                ":id",
+                "services"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -850,8 +1168,16 @@
             "header": [],
             "url": {
               "raw": "{{url}}/api/v1/providers/:id/services",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "providers", ":id", "services"],
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "providers",
+                ":id",
+                "services"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -893,8 +1219,17 @@
             },
             "url": {
               "raw": "{{url}}/api/v1/providers/:providerId/services/:serviceId",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "providers", ":providerId", "services", ":serviceId"],
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "providers",
+                ":providerId",
+                "services",
+                ":serviceId"
+              ],
               "variable": [
                 {
                   "key": "providerId",
@@ -926,8 +1261,17 @@
             "header": [],
             "url": {
               "raw": "{{url}}/api/v1/providers/:providerId/services/:serviceId",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "providers", ":providerId", "services", ":serviceId"],
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "providers",
+                ":providerId",
+                "services",
+                ":serviceId"
+              ],
               "variable": [
                 {
                   "key": "providerId",
@@ -973,8 +1317,16 @@
             },
             "url": {
               "raw": "{{url}}/api/v1/providers/:id/schedule",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "providers", ":id", "schedule"],
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "providers",
+                ":id",
+                "schedule"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -1002,8 +1354,16 @@
             "header": [],
             "url": {
               "raw": "{{url}}/api/v1/providers/:id/schedule",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "providers", ":id", "schedule"],
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "providers",
+                ":id",
+                "schedule"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -1045,8 +1405,16 @@
             },
             "url": {
               "raw": "{{url}}/api/v1/providers/:id/breaks",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "providers", ":id", "breaks"],
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "providers",
+                ":id",
+                "breaks"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -1088,8 +1456,16 @@
             },
             "url": {
               "raw": "{{url}}/api/v1/providers/:id/breaks",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "providers", ":id", "breaks"],
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "providers",
+                ":id",
+                "breaks"
+              ],
               "variable": [
                 {
                   "key": "id",
@@ -1117,8 +1493,17 @@
             "header": [],
             "url": {
               "raw": "{{url}}/api/v1/providers/:providerId/breaks/:breakId",
-              "host": ["{{url}}"],
-              "path": ["api", "v1", "providers", ":providerId", "breaks", ":breakId"],
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "providers",
+                ":providerId",
+                "breaks",
+                ":breakId"
+              ],
               "variable": [
                 {
                   "key": "providerId",
@@ -1136,6 +1521,181 @@
       ]
     },
     {
+      "name": "booking",
+      "item": [
+        {
+          "name": "list bookings",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/v1/bookings?page=1&limit=20",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Items per page (max 100)"
+                },
+                {
+                  "key": "tenantId",
+                  "value": "",
+                  "description": "Required when using a SUPER_ADMIN token. Ignored for ADMIN / PROVIDER / CUSTOMER (tenant comes from JWT).",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "ADMIN: all bookings in tenant. PROVIDER: own provider\u2019s bookings. CUSTOMER: own bookings only. SUPER_ADMIN: must pass tenantId query."
+          },
+          "response": []
+        },
+        {
+          "name": "get booking by id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/v1/bookings/:bookingId",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                ":bookingId"
+              ],
+              "variable": [
+                {
+                  "key": "bookingId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Same role/tenant access rules as list bookings."
+          },
+          "response": []
+        },
+        {
+          "name": "create slot hold",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"providerId\": \"provider-profile-uuid\",\n    \"serviceId\": \"service-uuid\",\n    \"startTime\": \"2026-05-10T10:00:00.000Z\",\n    \"endTime\": \"2026-05-10T11:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/api/v1/bookings/slot-holds",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "slot-holds"
+              ]
+            },
+            "description": "CUSTOMER only. Locks the slot for 15 minutes (expiresAt). Service must belong to the provider and tenant from JWT."
+          },
+          "response": []
+        },
+        {
+          "name": "cleanup expired slot holds",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/v1/bookings/slot-holds/cleanup-expired",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "bookings",
+                "slot-holds",
+                "cleanup-expired"
+              ],
+              "query": [
+                {
+                  "key": "tenantId",
+                  "value": "",
+                  "description": "Required for SUPER_ADMIN. Omit for ADMIN (uses tenant from JWT).",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "ADMIN or SUPER_ADMIN. Deletes non-converted SlotHold rows past expiresAt for the tenant."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "health",
       "item": [
         {
@@ -1144,9 +1704,15 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{url}}/health",
-              "host": ["{{url}}"],
-              "path": ["health"]
+              "raw": "{{url}}/api/v1/health",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "health"
+              ]
             }
           },
           "response": [
@@ -1157,8 +1723,12 @@
                 "header": [],
                 "url": {
                   "raw": "{{url}}/health",
-                  "host": ["{{url}}"],
-                  "path": ["health"]
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "health"
+                  ]
                 }
               },
               "status": "OK",
@@ -1182,8 +1752,13 @@
             "header": [],
             "url": {
               "raw": "{{url}}/health/ready",
-              "host": ["{{url}}"],
-              "path": ["health", "ready"]
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "health",
+                "ready"
+              ]
             }
           },
           "response": [
@@ -1194,8 +1769,13 @@
                 "header": [],
                 "url": {
                   "raw": "{{url}}/health/ready",
-                  "host": ["{{url}}"],
-                  "path": ["health", "ready"]
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "health",
+                    "ready"
+                  ]
                 }
               },
               "status": "OK",
@@ -1217,8 +1797,13 @@
                 "header": [],
                 "url": {
                   "raw": "{{url}}/health/ready",
-                  "host": ["{{url}}"],
-                  "path": ["health", "ready"]
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "health",
+                    "ready"
+                  ]
                 }
               },
               "status": "Service Unavailable",

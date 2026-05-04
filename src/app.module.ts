@@ -12,6 +12,7 @@ import { TenantModule } from './modules/tenant/tenant.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { ProviderModule } from './modules/provider/provider.module';
+import { BookingModule } from './modules/booking/booking.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { ProviderModule } from './modules/provider/provider.module';
     AuthModule,
     TenantModule,
     ProviderModule,
+    BookingModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
