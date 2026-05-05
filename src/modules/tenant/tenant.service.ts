@@ -102,6 +102,38 @@ export class TenantService {
     });
   }
 
+  async findCategories(tenantId: string) {
+    return this.prisma.serviceCategory.findMany({
+      where: { tenantId },
+      orderBy: { sortOrder: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        sortOrder: true,
+        isActive: true,
+      },
+    });
+  }
+
+  async deleteCategory(id: string, tenantId: string) {
+    const category = await this.prisma.serviceCategory.findUnique({
+      where: { id },
+    });
+
+    if (!category || category.tenantId !== tenantId) {
+      throw new NotFoundException('Category not found');
+    }
+
+    return this.prisma.serviceCategory.delete({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
+  }
+
   async findManyPaginated(query: PaginationQueryDto) {
     const { skip, take, page, limit } = getPaginationParams(query);
     const [items, total] = await Promise.all([

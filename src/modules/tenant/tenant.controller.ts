@@ -1,6 +1,8 @@
 import {
+  BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   HttpStatus,
   Param,
@@ -12,6 +14,8 @@ import { TenantService } from './tenant.service';
 import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { ToggleStatusDto } from './dto/toggle-status.dto';
+import { CreateCategoryDto } from './dto/create-category.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
 import { ApiResponse } from 'src/common/dto/api-response.dto';
 import { PaginationQueryDto } from 'src/common/dto/pagination.dto';
 import { Roles } from 'src/common/decorators/roles.decorator';
@@ -22,6 +26,84 @@ import type { CurrentUserPayload } from 'src/common/decorators/current-user.deco
 @Controller({ path: 'tenants', version: '1' })
 export class TenantController {
   constructor(private readonly tenantService: TenantService) {}
+
+  // ==================== CATEGORIES ====================
+
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Post('categories')
+  async createCategory(
+    @Body() dto: CreateCategoryDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    if (!user.tenantId) {
+      throw new BadRequestException('User does not belong to any tenant');
+    }
+    const result = await this.tenantService.createCategory(user.tenantId, dto);
+
+    return new ApiResponse({
+      code: HttpStatus.CREATED,
+      message: 'Category created successfully',
+      data: result,
+    });
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Get('categories')
+  async getCategories(@CurrentUser() user: CurrentUserPayload) {
+    if (!user.tenantId) {
+      throw new BadRequestException('User does not belong to any tenant');
+    }
+    const result = await this.tenantService.findCategories(user.tenantId);
+
+    return new ApiResponse({
+      code: HttpStatus.OK,
+      message: 'Success',
+      data: result,
+    });
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Patch('categories/:id')
+  async updateCategory(
+    @Param('id') id: string,
+    @Body() dto: UpdateCategoryDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    if (!user.tenantId) {
+      throw new BadRequestException('User does not belong to any tenant');
+    }
+    const result = await this.tenantService.updateCategory(
+      id,
+      user.tenantId,
+      dto,
+    );
+
+    return new ApiResponse({
+      code: HttpStatus.OK,
+      message: 'Category updated successfully',
+      data: result,
+    });
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Delete('categories/:id')
+  async deleteCategory(
+    @Param('id') id: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    if (!user.tenantId) {
+      throw new BadRequestException('User does not belong to any tenant');
+    }
+    const result = await this.tenantService.deleteCategory(id, user.tenantId);
+
+    return new ApiResponse({
+      code: HttpStatus.OK,
+      message: 'Category deleted successfully',
+      data: result,
+    });
+  }
+
+  // ==================== TENANTS ====================
 
   @Roles(UserRole.SUPER_ADMIN)
   @Post()

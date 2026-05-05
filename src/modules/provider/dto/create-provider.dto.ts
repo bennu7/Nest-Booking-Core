@@ -4,8 +4,9 @@ export class CreateProviderDto {
   @IsUUID()
   userId: string;
 
+  @IsOptional()
   @IsUUID()
-  tenantId: string;
+  tenantId?: string;
 
   @IsOptional()
   @IsString()

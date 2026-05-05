@@ -1,6 +1,11 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 
+/** Generates a random IP to bypass per-IP throttler limits in tests. */
+export function randomTestIp(): string {
+  return `10.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
+}
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface TokenPair {
@@ -19,18 +24,29 @@ export interface RegisterResult extends TokenPair {
  * Logs in via `POST /api/v1/auth/login` and returns the token pair.
  * Throws if the response is not 200.
  *
+ * Pass `tenantId` for tenant-scoped users (ADMIN, CUSTOMER, PROVIDER).
+ * Omit or pass `null` for SUPER_ADMIN (no tenant).
+ *
  * @example
- * const { accessToken } = await loginAs(app, seed.admin.email);
+ * const { accessToken } = await loginAs(app, seed.admin.email, 'Test1234!', seed.tenant.id);
  */
 export async function loginAs(
   app: INestApplication,
   email: string,
   password = 'Test1234!',
+  tenantId?: string | null,
 ): Promise<TokenPair> {
+  const body: Record<string, unknown> = { email, password };
+  if (tenantId) body.tenantId = tenantId;
+
+  // Gunakan IP random agar tidak kena throttler per-IP (limit: 10/menit)
+  const fakeIp = randomTestIp();
+
   const res = await request(app.getHttpServer())
     .post('/api/v1/auth/login')
     .set('user-agent', 'e2e-seed-helper')
-    .send({ email, password })
+    .set('X-Forwarded-For', fakeIp)
+    .send(body)
     .expect(200);
 
   return {
@@ -57,9 +73,12 @@ export async function registerUser(
   app: INestApplication,
   dto: { email: string; password: string; fullName: string; role?: string },
 ): Promise<RegisterResult & { accessToken: string; refreshToken: string }> {
+  const fakeIp = `10.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
+
   const res = await request(app.getHttpServer())
     .post('/api/v1/auth/register')
     .set('user-agent', 'e2e-seed-helper')
+    .set('X-Forwarded-For', fakeIp)
     .send(dto)
     .expect(201);
 

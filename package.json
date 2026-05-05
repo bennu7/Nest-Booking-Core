@@ -33,6 +33,7 @@
     "db:test:seed": "dotenv -e .env.test -- tsx prisma/seed.ts",
     "db:test:studio": "dotenv -e .env.test -- prisma studio",
     "test:e2e": "cross-env E2E_TEST=1 NODE_OPTIONS=--experimental-vm-modules jest --config ./test/jest-e2e.json",
+    "test:e2e:bun": "cross-env E2E_TEST=1 NODE_OPTIONS=--experimental-vm-modules bun x jest --config ./test/jest-e2e.json",
     "test:e2e:setup": "npm run db:test:migrate && npm run db:test:seed",
     "sonarqube": "bash scripts/sonarqube.sh"
   },
