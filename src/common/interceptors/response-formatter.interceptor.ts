@@ -24,7 +24,11 @@ export class ResponseFormatterInterceptor implements NestInterceptor {
           return data;
         }
 
-        return new ApiResponse(data);
+        if (data !== null && typeof data === 'object') {
+          return new ApiResponse(data);
+        }
+
+        return new ApiResponse({ data });
       }),
     );
   }

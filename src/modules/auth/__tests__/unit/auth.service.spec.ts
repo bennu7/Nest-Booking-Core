@@ -33,7 +33,7 @@ function createPrismaMock() {
     refreshToken: {
       findUnique: jest.fn(),
       create: jest.fn(),
-      deleteMany: jest.fn(),
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       delete: jest.fn(),
     },
   };
@@ -171,6 +171,7 @@ describe('AuthService', () => {
       jwtService.signAsync
         .mockResolvedValueOnce('access.jwt')
         .mockResolvedValueOnce('refresh.jwt');
+      prisma.refreshToken.deleteMany.mockResolvedValue({ count: 0 });
       prisma.refreshToken.create.mockResolvedValue({ id: 'rt1' });
 
       const result = await service.login(dto, {
@@ -204,6 +205,7 @@ describe('AuthService', () => {
       jwtService.signAsync
         .mockResolvedValueOnce('a')
         .mockResolvedValueOnce('r');
+      prisma.refreshToken.deleteMany.mockResolvedValue({ count: 0 });
       prisma.refreshToken.create.mockResolvedValue({});
 
       await service.login(dto, {});

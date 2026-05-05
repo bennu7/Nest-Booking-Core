@@ -28,7 +28,12 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "NODE_OPTIONS='--experimental-vm-modules' jest --config ./test/jest-e2e.json",
+    "db:test:migrate": "dotenv -e .env.test -- prisma migrate deploy",
+    "db:test:push": "dotenv -e .env.test -- prisma db push",
+    "db:test:seed": "dotenv -e .env.test -- tsx prisma/seed.ts",
+    "db:test:studio": "dotenv -e .env.test -- prisma studio",
+    "test:e2e": "cross-env E2E_TEST=1 NODE_OPTIONS=--experimental-vm-modules jest --config ./test/jest-e2e.json",
+    "test:e2e:setup": "npm run db:test:migrate && npm run db:test:seed",
     "sonarqube": "bash scripts/sonarqube.sh"
   },
   "dependencies": {
@@ -68,6 +73,9 @@
     "@types/passport-jwt": "^4.0.1",
     "@types/supertest": "^6.0.2",
     "@types/webpack-env": "^1.18.8",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.4.7",
+    "dotenv-cli": "^7.4.4",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",

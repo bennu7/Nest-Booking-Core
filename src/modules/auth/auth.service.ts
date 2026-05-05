@@ -126,6 +126,8 @@ export class AuthService {
       tenantId: user.tenantId ?? null,
     });
 
+    await this.prisma.refreshToken.deleteMany({ where: { userId: user.id } });
+
     await this._tokenHash({
       userId: user.id,
       refreshToken: token.refreshToken,

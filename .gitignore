@@ -3,6 +3,7 @@ src/generated
 dist/
 
 .env
+.env.test
 .DS_Store
 
 CASE.md
@@ -12,3 +13,4 @@ HANDOFF.md
 .qwen/PROJECT_SUMMARY.md
 .scannerwork
 ISSUES.md
+PLAN.md
