@@ -55,12 +55,18 @@ describe('BookingController', () => {
     it('returns ApiResponse OK with service result', async () => {
       const user = currentUserPayload();
       const query = listBookingsQueryDto();
-      const payload = { items: [], meta: { page: 1, limit: 20, total: 0, totalPages: 1 } };
+      const payload = {
+        items: [],
+        meta: { page: 1, limit: 20, total: 0, totalPages: 1 },
+      };
       bookingService.findManyPaginated.mockResolvedValue(payload);
 
       const res = await controller.list(user, query);
 
-      expect(bookingService.findManyPaginated).toHaveBeenCalledWith(user, query);
+      expect(bookingService.findManyPaginated).toHaveBeenCalledWith(
+        user,
+        query,
+      );
       expect(res.code).toBe(HttpStatus.OK);
       expect(res.message).toBe('Success');
       expect(res.data).toEqual(payload);
@@ -75,7 +81,10 @@ describe('BookingController', () => {
 
       const res = await controller.getOne(user, BOOKING_ID);
 
-      expect(bookingService.findOneOrThrow).toHaveBeenCalledWith(user, BOOKING_ID);
+      expect(bookingService.findOneOrThrow).toHaveBeenCalledWith(
+        user,
+        BOOKING_ID,
+      );
       expect(res.code).toBe(HttpStatus.OK);
       expect(res.data).toEqual(booking);
     });
@@ -133,9 +142,9 @@ describe('BookingController', () => {
       });
       const query = cleanupExpiredHoldsQueryDto({ tenantId: undefined });
 
-      await expect(controller.cleanupExpiredHolds(user, query)).rejects.toBeInstanceOf(
-        BadRequestException,
-      );
+      await expect(
+        controller.cleanupExpiredHolds(user, query),
+      ).rejects.toBeInstanceOf(BadRequestException);
       expect(slotService.deleteExpiredHolds).not.toHaveBeenCalled();
     });
 
