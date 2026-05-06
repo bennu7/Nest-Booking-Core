@@ -1,8 +1,11 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { UserRole } from '@generated/enums';
+import { CurrentUserPayload } from 'src/common/decorators/current-user.decorator';
 import { PrismaService } from 'src/prisma';
 import {
   CreateProviderDto,
@@ -14,6 +17,46 @@ import {
 @Injectable()
 export class ProviderService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * Validates that a PROVIDER user owns the target provider profile.
+   * ADMIN/SUPER_ADMIN bypass this check — mereka mengelola semua provider di tenant mereka.
+   *
+   * @throws ForbiddenException jika provider yang login bukan pemilik profil target
+   * @throws NotFoundException jika provider profile tidak ditemukan
+   */
+  private async assertProviderOwnership(
+    providerId: string,
+    tenantId: string,
+    currentUser: CurrentUserPayload,
+  ): Promise<void> {
+    if (currentUser.role !== UserRole.PROVIDER) {
+      // For non-providers (ADMIN/SA), we still need to verify the provider exists in this tenant
+      const exists = await this.prisma.providerProfile.findUnique({
+        where: { id: providerId, tenantId },
+        select: { id: true },
+      });
+      if (!exists) {
+        throw new NotFoundException('Provider not found');
+      }
+      return;
+    }
+
+    const profile = await this.prisma.providerProfile.findUnique({
+      where: { id: providerId, tenantId },
+      select: { userId: true },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Provider not found');
+    }
+
+    if (profile.userId !== currentUser.id) {
+      throw new ForbiddenException(
+        'You can only manage your own provider profile',
+      );
+    }
+  }
 
   // ==================== PROVIDER PROFILE ====================
 
@@ -99,14 +142,13 @@ export class ProviderService {
     return provider;
   }
 
-  async update(id: string, dto: UpdateProviderDto, tenantId: string) {
-    const provider = await this.prisma.providerProfile.findUnique({
-      where: { id, tenantId },
-    });
-
-    if (!provider) {
-      throw new NotFoundException('Provider not found');
-    }
+  async update(
+    id: string,
+    dto: UpdateProviderDto,
+    tenantId: string,
+    currentUser: CurrentUserPayload,
+  ) {
+    await this.assertProviderOwnership(id, tenantId, currentUser);
 
     return this.prisma.providerProfile.update({
       where: { id, tenantId },
@@ -126,14 +168,9 @@ export class ProviderService {
     providerId: string,
     tenantId: string,
     dto: CreateServiceDto,
+    currentUser: CurrentUserPayload,
   ) {
-    const provider = await this.prisma.providerProfile.findUnique({
-      where: { id: providerId, tenantId },
-    });
-
-    if (!provider) {
-      throw new NotFoundException('Provider not found');
-    }
+    await this.assertProviderOwnership(providerId, tenantId, currentUser);
 
     if (dto.categoryId) {
       const category = await this.prisma.serviceCategory.findUnique({
@@ -188,21 +225,16 @@ export class ProviderService {
     providerId: string,
     tenantId: string,
     dto: UpdateServiceDto,
+    currentUser: CurrentUserPayload,
   ) {
+    await this.assertProviderOwnership(providerId, tenantId, currentUser);
+
     const service = await this.prisma.service.findFirst({
       where: { id: serviceId, providerId },
     });
 
     if (!service) {
       throw new NotFoundException('Service not found');
-    }
-
-    const provider = await this.prisma.providerProfile.findUnique({
-      where: { id: providerId, tenantId },
-    });
-
-    if (!provider) {
-      throw new NotFoundException('Provider not found');
     }
 
     if (dto.categoryId) {
@@ -237,21 +269,20 @@ export class ProviderService {
     });
   }
 
-  async deleteService(serviceId: string, providerId: string, tenantId: string) {
+  async deleteService(
+    serviceId: string,
+    providerId: string,
+    tenantId: string,
+    currentUser: CurrentUserPayload,
+  ) {
+    await this.assertProviderOwnership(providerId, tenantId, currentUser);
+
     const service = await this.prisma.service.findFirst({
       where: { id: serviceId, providerId },
     });
 
     if (!service) {
       throw new NotFoundException('Service not found');
-    }
-
-    const provider = await this.prisma.providerProfile.findUnique({
-      where: { id: providerId, tenantId },
-    });
-
-    if (!provider) {
-      throw new NotFoundException('Provider not found');
     }
 
     const activeBookings = await this.prisma.booking.count({

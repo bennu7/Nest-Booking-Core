@@ -1,8 +1,11 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { UserRole } from '@generated/enums';
+import { CurrentUserPayload } from 'src/common/decorators/current-user.decorator';
 import { PrismaService } from 'src/prisma';
 import { UpdateScheduleDto, CreateBreakDto } from './dto';
 
@@ -10,20 +13,55 @@ import { UpdateScheduleDto, CreateBreakDto } from './dto';
 export class ScheduleService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Validates that a PROVIDER user owns the target provider profile.
+   * ADMIN/SUPER_ADMIN bypass this check — mereka mengelola semua provider di tenant mereka.
+   *
+   * @throws ForbiddenException jika provider yang login bukan pemilik profil target
+   * @throws NotFoundException jika provider profile tidak ditemukan
+   */
+  private async assertProviderOwnership(
+    providerId: string,
+    tenantId: string,
+    currentUser: CurrentUserPayload,
+  ): Promise<void> {
+    if (currentUser.role !== UserRole.PROVIDER) {
+      // For non-providers (ADMIN/SA), we still need to verify the provider exists in this tenant
+      const exists = await this.prisma.providerProfile.findUnique({
+        where: { id: providerId, tenantId },
+        select: { id: true },
+      });
+      if (!exists) {
+        throw new NotFoundException('Provider not found');
+      }
+      return;
+    }
+
+    const profile = await this.prisma.providerProfile.findUnique({
+      where: { id: providerId, tenantId },
+      select: { userId: true },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Provider not found');
+    }
+
+    if (profile.userId !== currentUser.id) {
+      throw new ForbiddenException(
+        'You can only manage your own provider profile',
+      );
+    }
+  }
+
   // ==================== PROVIDER SCHEDULE ====================
 
   async updateSchedule(
     providerId: string,
     tenantId: string,
     dto: UpdateScheduleDto,
+    currentUser: CurrentUserPayload,
   ) {
-    const provider = await this.prisma.providerProfile.findUnique({
-      where: { id: providerId, tenantId },
-    });
-
-    if (!provider) {
-      throw new NotFoundException('Provider not found');
-    }
+    await this.assertProviderOwnership(providerId, tenantId, currentUser);
 
     const daySet = new Set(dto.days.map((d) => d.dayOfWeek));
 
@@ -89,14 +127,13 @@ export class ScheduleService {
 
   // ==================== PROVIDER BREAK ====================
 
-  async createBreak(providerId: string, tenantId: string, dto: CreateBreakDto) {
-    const provider = await this.prisma.providerProfile.findUnique({
-      where: { id: providerId, tenantId },
-    });
-
-    if (!provider) {
-      throw new NotFoundException('Provider not found');
-    }
+  async createBreak(
+    providerId: string,
+    tenantId: string,
+    dto: CreateBreakDto,
+    currentUser: CurrentUserPayload,
+  ) {
+    await this.assertProviderOwnership(providerId, tenantId, currentUser);
 
     if (dto.isRecurring) {
       if (dto.dayOfWeek === undefined) {
@@ -154,14 +191,13 @@ export class ScheduleService {
     }
   }
 
-  async deleteBreak(breakId: string, providerId: string, tenantId: string) {
-    const provider = await this.prisma.providerProfile.findUnique({
-      where: { id: providerId, tenantId },
-    });
-
-    if (!provider) {
-      throw new NotFoundException('Provider not found');
-    }
+  async deleteBreak(
+    breakId: string,
+    providerId: string,
+    tenantId: string,
+    currentUser: CurrentUserPayload,
+  ) {
+    await this.assertProviderOwnership(providerId, tenantId, currentUser);
 
     const breakRecord = await this.prisma.providerBreak.findFirst({
       where: { id: breakId, providerId },

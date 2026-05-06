@@ -40,7 +40,12 @@ describe('Cross-Module Flows (e2e)', () => {
 
   it('Flow 1 — full booking lifecycle: slot hold oleh customer', async () => {
     // Login sebagai ADMIN (sudah ada tenant dari seed)
-    const { accessToken: adminToken } = await loginAs(app, seed.admin.email, SEED_PASSWORD, seed.tenant.id);
+    const { accessToken: adminToken } = await loginAs(
+      app,
+      seed.admin.email,
+      SEED_PASSWORD,
+      seed.tenant.id,
+    );
 
     // Verifikasi provider sudah ada di tenant
     const providerListRes = await request(app.getHttpServer())
@@ -92,7 +97,12 @@ describe('Cross-Module Flows (e2e)', () => {
 
   it('Flow 2 — tenant data isolation: ADMIN hanya melihat data tenant sendiri', async () => {
     // Tenant A sudah ada dari seed (seed.tenant + seed.admin)
-    const { accessToken: adminAToken } = await loginAs(app, seed.admin.email, SEED_PASSWORD, seed.tenant.id);
+    const { accessToken: adminAToken } = await loginAs(
+      app,
+      seed.admin.email,
+      SEED_PASSWORD,
+      seed.tenant.id,
+    );
 
     // Buat Tenant B secara terpisah via DB langsung (untuk efisiensi)
     const uid = randomUUID().slice(0, 8);
@@ -134,7 +144,9 @@ describe('Cross-Module Flows (e2e)', () => {
       .set('Authorization', `Bearer ${adminAToken}`)
       .expect(200);
 
-    const providerIds: string[] = resA.body.data.map((p: { id: string }) => p.id);
+    const providerIds: string[] = resA.body.data.map(
+      (p: { id: string }) => p.id,
+    );
 
     // Pastikan provider dari tenant A ada
     expect(providerIds).toContain(seed.providerProfile.id);
@@ -155,7 +167,11 @@ describe('Cross-Module Flows (e2e)', () => {
     const loginRes = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .set('user-agent', 'e2e-flow-test')
-      .send({ email: seed.admin.email, password: SEED_PASSWORD, tenantId: seed.tenant.id })
+      .send({
+        email: seed.admin.email,
+        password: SEED_PASSWORD,
+        tenantId: seed.tenant.id,
+      })
       .expect(200);
 
     const { accessToken, refreshToken } = loginRes.body.data;
@@ -201,20 +217,33 @@ describe('Cross-Module Flows (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .set('user-agent', 'e2e-flow-test')
-      .send({ email: seed.admin.email, password: SEED_PASSWORD, tenantId: seed.tenant.id })
+      .send({
+        email: seed.admin.email,
+        password: SEED_PASSWORD,
+        tenantId: seed.tenant.id,
+      })
       .expect(200);
   });
 
   // ─── Flow 4: User Deactivation Impact ───────────────────────────────────────
 
   it('Flow 4 — user deactivation: admin nonaktifkan user → login ditolak', async () => {
-    const { accessToken: adminToken } = await loginAs(app, seed.admin.email, SEED_PASSWORD, seed.tenant.id);
+    const { accessToken: adminToken } = await loginAs(
+      app,
+      seed.admin.email,
+      SEED_PASSWORD,
+      seed.tenant.id,
+    );
 
     // Pastikan customer bisa login dulu
     await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .set('user-agent', 'e2e-flow-test')
-      .send({ email: seed.customer.email, password: SEED_PASSWORD, tenantId: seed.tenant.id })
+      .send({
+        email: seed.customer.email,
+        password: SEED_PASSWORD,
+        tenantId: seed.tenant.id,
+      })
       .expect(200);
 
     // ADMIN toggle customer inactive
@@ -230,7 +259,11 @@ describe('Cross-Module Flows (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .set('user-agent', 'e2e-flow-test')
-      .send({ email: seed.customer.email, password: SEED_PASSWORD, tenantId: seed.tenant.id })
+      .send({
+        email: seed.customer.email,
+        password: SEED_PASSWORD,
+        tenantId: seed.tenant.id,
+      })
       .expect(401);
 
     // ADMIN aktifkan kembali
@@ -244,7 +277,11 @@ describe('Cross-Module Flows (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .set('user-agent', 'e2e-flow-test')
-      .send({ email: seed.customer.email, password: SEED_PASSWORD, tenantId: seed.tenant.id })
+      .send({
+        email: seed.customer.email,
+        password: SEED_PASSWORD,
+        tenantId: seed.tenant.id,
+      })
       .expect(200);
   });
 });

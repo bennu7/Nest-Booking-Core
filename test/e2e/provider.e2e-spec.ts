@@ -26,8 +26,12 @@ describe('Provider (e2e)', () => {
   beforeEach(async () => {
     await truncateDatabase(prisma);
     seed = await seedAll(prisma);
-    adminToken = (await loginAs(app, seed.admin.email, 'Test1234!', seed.tenant.id)).accessToken;
-    customerToken = (await loginAs(app, seed.customer.email, 'Test1234!', seed.tenant.id)).accessToken;
+    adminToken = (
+      await loginAs(app, seed.admin.email, 'Test1234!', seed.tenant.id)
+    ).accessToken;
+    customerToken = (
+      await loginAs(app, seed.customer.email, 'Test1234!', seed.tenant.id)
+    ).accessToken;
   });
 
   // ─── POST /api/v1/providers ────────────────────────────────────────────────
@@ -54,7 +58,6 @@ describe('Provider (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           userId: newProviderUser.id,
-          tenantId: seed.tenant.id,
           bio: 'New provider bio',
           specialization: 'Massage therapy',
         })
@@ -72,7 +75,6 @@ describe('Provider (e2e)', () => {
         .set('Authorization', `Bearer ${customerToken}`)
         .send({
           userId: seed.providerUser.id,
-          tenantId: seed.tenant.id,
         })
         .expect(403);
 
@@ -84,7 +86,6 @@ describe('Provider (e2e)', () => {
         .post('/api/v1/providers')
         .send({
           userId: seed.providerUser.id,
-          tenantId: seed.tenant.id,
         })
         .expect(401);
 
@@ -97,7 +98,6 @@ describe('Provider (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .send({
           userId: 'bukan-uuid',
-          tenantId: seed.tenant.id,
         })
         .expect(400);
 

@@ -1,19 +1,26 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 
 import { PrismaService } from 'src/prisma';
 import { ProviderService } from '../../provider.service';
 import {
   CATEGORY_ID,
+  OTHER_USER_ID,
   PROVIDER_ID,
   SERVICE_ID,
   TENANT_ID,
   USER_ID,
   createProviderDto,
   createServiceDto,
+  currentUserPayload,
   makeProviderProfile,
   makeService,
   makeUser,
+  providerUserPayload,
   updateProviderDto,
   updateServiceDto,
 } from '../fixtures/provider.fixture';
@@ -172,12 +179,17 @@ describe('ProviderService', () => {
       prisma.providerProfile.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.update(PROVIDER_ID, updateProviderDto(), TENANT_ID),
+        service.update(
+          PROVIDER_ID,
+          updateProviderDto(),
+          TENANT_ID,
+          currentUserPayload(),
+        ),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(prisma.providerProfile.update).not.toHaveBeenCalled();
     });
 
-    it('calls update when provider exists', async () => {
+    it('calls update when provider exists and user is ADMIN', async () => {
       prisma.providerProfile.findUnique.mockResolvedValue(
         makeProviderProfile(),
       );
@@ -188,6 +200,7 @@ describe('ProviderService', () => {
         PROVIDER_ID,
         updateProviderDto(),
         TENANT_ID,
+        currentUserPayload(),
       );
 
       expect(prisma.providerProfile.update).toHaveBeenCalledWith(
@@ -196,6 +209,35 @@ describe('ProviderService', () => {
         }),
       );
       expect(result).toEqual(updated);
+    });
+
+    it('should allow PROVIDER to update their own profile', async () => {
+      const providerUser = providerUserPayload({ id: USER_ID }); // userId matches profile.userId
+      prisma.providerProfile.findUnique.mockResolvedValue(
+        makeProviderProfile({ userId: USER_ID }),
+      );
+      prisma.providerProfile.update.mockResolvedValue(
+        makeProviderProfile({ bio: 'Updated' }),
+      );
+
+      const result = await service.update(
+        PROVIDER_ID,
+        { bio: 'Updated' },
+        TENANT_ID,
+        providerUser,
+      );
+      expect(result.bio).toBe('Updated');
+    });
+
+    it('should throw ForbiddenException when PROVIDER tries to update another provider', async () => {
+      const providerUser = providerUserPayload({ id: OTHER_USER_ID }); // userId DOES NOT match
+      prisma.providerProfile.findUnique.mockResolvedValue(
+        makeProviderProfile({ userId: USER_ID }),
+      );
+
+      await expect(
+        service.update(PROVIDER_ID, { bio: 'Hacked' }, TENANT_ID, providerUser),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
 
@@ -206,7 +248,12 @@ describe('ProviderService', () => {
       prisma.providerProfile.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.createService(PROVIDER_ID, TENANT_ID, createServiceDto()),
+        service.createService(
+          PROVIDER_ID,
+          TENANT_ID,
+          createServiceDto(),
+          currentUserPayload(),
+        ),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(prisma.service.create).not.toHaveBeenCalled();
     });
@@ -222,6 +269,7 @@ describe('ProviderService', () => {
           PROVIDER_ID,
           TENANT_ID,
           createServiceDto({ categoryId: CATEGORY_ID }),
+          currentUserPayload(),
         ),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
@@ -237,6 +285,7 @@ describe('ProviderService', () => {
         PROVIDER_ID,
         TENANT_ID,
         createServiceDto(),
+        currentUserPayload(),
       );
 
       expect(prisma.service.create).toHaveBeenCalledWith(
@@ -263,6 +312,7 @@ describe('ProviderService', () => {
         PROVIDER_ID,
         TENANT_ID,
         createServiceDto({ categoryId: CATEGORY_ID }),
+        currentUserPayload(),
       );
 
       expect(prisma.serviceCategory.findUnique).toHaveBeenCalledWith({
@@ -306,6 +356,9 @@ describe('ProviderService', () => {
   describe('updateService', () => {
     it('throws NotFoundException when service not found', async () => {
       prisma.service.findFirst.mockResolvedValue(null);
+      prisma.providerProfile.findUnique.mockResolvedValue(
+        makeProviderProfile(),
+      );
 
       await expect(
         service.updateService(
@@ -313,6 +366,7 @@ describe('ProviderService', () => {
           PROVIDER_ID,
           TENANT_ID,
           updateServiceDto(),
+          currentUserPayload(),
         ),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(prisma.service.update).not.toHaveBeenCalled();
@@ -328,6 +382,7 @@ describe('ProviderService', () => {
           PROVIDER_ID,
           TENANT_ID,
           updateServiceDto(),
+          currentUserPayload(),
         ),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
@@ -345,6 +400,7 @@ describe('ProviderService', () => {
           PROVIDER_ID,
           TENANT_ID,
           updateServiceDto({ categoryId: CATEGORY_ID }),
+          currentUserPayload(),
         ),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
@@ -362,6 +418,7 @@ describe('ProviderService', () => {
         PROVIDER_ID,
         TENANT_ID,
         updateServiceDto(),
+        currentUserPayload(),
       );
 
       expect(prisma.service.update).toHaveBeenCalledWith(
@@ -376,9 +433,17 @@ describe('ProviderService', () => {
   describe('deleteService', () => {
     it('throws NotFoundException when service not found', async () => {
       prisma.service.findFirst.mockResolvedValue(null);
+      prisma.providerProfile.findUnique.mockResolvedValue(
+        makeProviderProfile(),
+      );
 
       await expect(
-        service.deleteService(SERVICE_ID, PROVIDER_ID, TENANT_ID),
+        service.deleteService(
+          SERVICE_ID,
+          PROVIDER_ID,
+          TENANT_ID,
+          currentUserPayload(),
+        ),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -387,7 +452,12 @@ describe('ProviderService', () => {
       prisma.providerProfile.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.deleteService(SERVICE_ID, PROVIDER_ID, TENANT_ID),
+        service.deleteService(
+          SERVICE_ID,
+          PROVIDER_ID,
+          TENANT_ID,
+          currentUserPayload(),
+        ),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -399,7 +469,12 @@ describe('ProviderService', () => {
       prisma.booking.count.mockResolvedValue(2);
 
       await expect(
-        service.deleteService(SERVICE_ID, PROVIDER_ID, TENANT_ID),
+        service.deleteService(
+          SERVICE_ID,
+          PROVIDER_ID,
+          TENANT_ID,
+          currentUserPayload(),
+        ),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(prisma.service.delete).not.toHaveBeenCalled();
     });
@@ -416,6 +491,7 @@ describe('ProviderService', () => {
         SERVICE_ID,
         PROVIDER_ID,
         TENANT_ID,
+        currentUserPayload(),
       );
 
       expect(prisma.service.delete).toHaveBeenCalledWith({

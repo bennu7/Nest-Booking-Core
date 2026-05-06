@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -34,6 +35,15 @@ export class ProviderController {
     private readonly scheduleService: ScheduleService,
   ) {}
 
+  private requireTenantContext(user: CurrentUserPayload): string {
+    if (!user.tenantId) {
+      throw new BadRequestException(
+        'Tenant context is required. SUPER_ADMIN must use a tenant-scoped token.',
+      );
+    }
+    return user.tenantId;
+  }
+
   // ==================== PROVIDER PROFILE ====================
 
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
@@ -42,13 +52,7 @@ export class ProviderController {
     @Body() dto: CreateProviderDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      throw new Error(
-        'SUPER_ADMIN cannot create providers directly. Use a tenant context.',
-      );
-    }
+    const tenantId = this.requireTenantContext(user);
 
     const result = await this.providerService.create(dto, tenantId);
 
@@ -62,13 +66,7 @@ export class ProviderController {
   @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
   @Get()
   async findAll(@CurrentUser() user: CurrentUserPayload) {
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      throw new Error(
-        'SUPER_ADMIN cannot list providers without tenant context',
-      );
-    }
+    const tenantId = this.requireTenantContext(user);
 
     const result = await this.providerService.findAll(tenantId);
 
@@ -79,19 +77,18 @@ export class ProviderController {
     });
   }
 
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.CUSTOMER)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.PROVIDER,
+    UserRole.CUSTOMER,
+  )
   @Get(':id')
   async findOne(
     @Param('id') id: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      throw new Error(
-        'SUPER_ADMIN cannot view providers without tenant context',
-      );
-    }
+    const tenantId = this.requireTenantContext(user);
 
     const result = await this.providerService.findOne(id, tenantId);
 
@@ -102,22 +99,16 @@ export class ProviderController {
     });
   }
 
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.PROVIDER)
   @Patch(':id')
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateProviderDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const tenantId = user.tenantId;
+    const tenantId = this.requireTenantContext(user);
 
-    if (!tenantId) {
-      throw new Error(
-        'SUPER_ADMIN cannot update providers without tenant context',
-      );
-    }
-
-    const result = await this.providerService.update(id, dto, tenantId);
+    const result = await this.providerService.update(id, dto, tenantId, user);
 
     return new ApiResponse({
       code: HttpStatus.OK,
@@ -128,25 +119,20 @@ export class ProviderController {
 
   // ==================== SERVICE CRUD ====================
 
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.PROVIDER)
   @Post(':id/services')
   async createService(
     @Param('id') providerId: string,
     @Body() dto: CreateServiceDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      throw new Error(
-        'SUPER_ADMIN cannot create services without tenant context',
-      );
-    }
+    const tenantId = this.requireTenantContext(user);
 
     const result = await this.providerService.createService(
       providerId,
       tenantId,
       dto,
+      user,
     );
 
     return new ApiResponse({
@@ -156,19 +142,18 @@ export class ProviderController {
     });
   }
 
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.CUSTOMER)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.PROVIDER,
+    UserRole.CUSTOMER,
+  )
   @Get(':id/services')
   async findServices(
     @Param('id') providerId: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      throw new Error(
-        'SUPER_ADMIN cannot list services without tenant context',
-      );
-    }
+    const tenantId = this.requireTenantContext(user);
 
     const result = await this.providerService.findServices(
       providerId,
@@ -182,7 +167,7 @@ export class ProviderController {
     });
   }
 
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.PROVIDER)
   @Patch(':providerId/services/:serviceId')
   async updateService(
     @Param('providerId') providerId: string,
@@ -190,19 +175,14 @@ export class ProviderController {
     @Body() dto: UpdateServiceDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      throw new Error(
-        'SUPER_ADMIN cannot update services without tenant context',
-      );
-    }
+    const tenantId = this.requireTenantContext(user);
 
     const result = await this.providerService.updateService(
       serviceId,
       providerId,
       tenantId,
       dto,
+      user,
     );
 
     return new ApiResponse({
@@ -212,22 +192,21 @@ export class ProviderController {
     });
   }
 
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.PROVIDER)
   @Delete(':providerId/services/:serviceId')
   async deleteService(
     @Param('providerId') providerId: string,
     @Param('serviceId') serviceId: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const tenantId = user.tenantId;
+    const tenantId = this.requireTenantContext(user);
 
-    if (!tenantId) {
-      throw new Error(
-        'SUPER_ADMIN cannot delete services without tenant context',
-      );
-    }
-
-    await this.providerService.deleteService(serviceId, providerId, tenantId);
+    await this.providerService.deleteService(
+      serviceId,
+      providerId,
+      tenantId,
+      user,
+    );
 
     return new ApiResponse({
       code: HttpStatus.OK,
@@ -237,25 +216,20 @@ export class ProviderController {
 
   // ==================== SCHEDULE ====================
 
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.PROVIDER)
   @Patch(':id/schedule')
   async updateSchedule(
     @Param('id') providerId: string,
     @Body() dto: UpdateScheduleDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      throw new Error(
-        'SUPER_ADMIN cannot update schedules without tenant context',
-      );
-    }
+    const tenantId = this.requireTenantContext(user);
 
     const result = await this.scheduleService.updateSchedule(
       providerId,
       tenantId,
       dto,
+      user,
     );
 
     return new ApiResponse({
@@ -265,19 +239,18 @@ export class ProviderController {
     });
   }
 
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.CUSTOMER)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.PROVIDER,
+    UserRole.CUSTOMER,
+  )
   @Get(':id/schedule')
   async getSchedule(
     @Param('id') providerId: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      throw new Error(
-        'SUPER_ADMIN cannot view schedules without tenant context',
-      );
-    }
+    const tenantId = this.requireTenantContext(user);
 
     const result = await this.scheduleService.getSchedule(providerId, tenantId);
 
@@ -290,25 +263,20 @@ export class ProviderController {
 
   // ==================== BREAK ====================
 
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.PROVIDER)
   @Post(':id/breaks')
   async createBreak(
     @Param('id') providerId: string,
     @Body() dto: CreateBreakDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const tenantId = user.tenantId;
-
-    if (!tenantId) {
-      throw new Error(
-        'SUPER_ADMIN cannot create breaks without tenant context',
-      );
-    }
+    const tenantId = this.requireTenantContext(user);
 
     const result = await this.scheduleService.createBreak(
       providerId,
       tenantId,
       dto,
+      user,
     );
 
     return new ApiResponse({
@@ -318,22 +286,16 @@ export class ProviderController {
     });
   }
 
-  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN, UserRole.PROVIDER)
   @Delete(':providerId/breaks/:breakId')
   async deleteBreak(
     @Param('providerId') providerId: string,
     @Param('breakId') breakId: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const tenantId = user.tenantId;
+    const tenantId = this.requireTenantContext(user);
 
-    if (!tenantId) {
-      throw new Error(
-        'SUPER_ADMIN cannot delete breaks without tenant context',
-      );
-    }
-
-    await this.scheduleService.deleteBreak(breakId, providerId, tenantId);
+    await this.scheduleService.deleteBreak(breakId, providerId, tenantId, user);
 
     return new ApiResponse({
       code: HttpStatus.OK,

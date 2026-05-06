@@ -1,4 +1,4 @@
-import { HttpStatus } from '@nestjs/common';
+import { BadRequestException, HttpStatus } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ThrottlerGuard } from '@nestjs/throttler';
 
@@ -93,7 +93,7 @@ describe('ProviderController', () => {
       expect(res.data).toEqual(profile);
     });
 
-    it('throws Error when SUPER_ADMIN has no tenantId', async () => {
+    it('throws BadRequestException when SUPER_ADMIN has no tenantId', async () => {
       const superAdmin = currentUserPayload({
         role: UserRole.SUPER_ADMIN,
         tenantId: null,
@@ -101,7 +101,7 @@ describe('ProviderController', () => {
 
       await expect(
         controller.create(createProviderDto(), superAdmin),
-      ).rejects.toThrow();
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
 
@@ -120,13 +120,15 @@ describe('ProviderController', () => {
       expect(res.data).toEqual(profiles);
     });
 
-    it('throws Error when SUPER_ADMIN has no tenantId', async () => {
+    it('throws BadRequestException when SUPER_ADMIN has no tenantId', async () => {
       const superAdmin = currentUserPayload({
         role: UserRole.SUPER_ADMIN,
         tenantId: null,
       });
 
-      await expect(controller.findAll(superAdmin)).rejects.toThrow();
+      await expect(controller.findAll(superAdmin)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
     });
   });
 
@@ -162,6 +164,7 @@ describe('ProviderController', () => {
         PROVIDER_ID,
         dto,
         TENANT_ID,
+        adminUser,
       );
       expect(res.code).toBe(HttpStatus.OK);
       expect(res.message).toBe('Provider updated successfully');
@@ -183,6 +186,7 @@ describe('ProviderController', () => {
         PROVIDER_ID,
         TENANT_ID,
         dto,
+        adminUser,
       );
       expect(res.code).toBe(HttpStatus.CREATED);
       expect(res.message).toBe('Service created successfully');
@@ -228,6 +232,7 @@ describe('ProviderController', () => {
         PROVIDER_ID,
         TENANT_ID,
         dto,
+        adminUser,
       );
       expect(res.code).toBe(HttpStatus.OK);
       expect(res.message).toBe('Service updated successfully');
@@ -251,6 +256,7 @@ describe('ProviderController', () => {
         SERVICE_ID,
         PROVIDER_ID,
         TENANT_ID,
+        adminUser,
       );
       expect(res.code).toBe(HttpStatus.OK);
       expect(res.message).toBe('Service deleted successfully');
@@ -271,6 +277,7 @@ describe('ProviderController', () => {
         PROVIDER_ID,
         TENANT_ID,
         dto,
+        adminUser,
       );
       expect(res.code).toBe(HttpStatus.OK);
       expect(res.message).toBe('Schedule updated successfully');
@@ -310,6 +317,7 @@ describe('ProviderController', () => {
         PROVIDER_ID,
         TENANT_ID,
         dto,
+        adminUser,
       );
       expect(res.code).toBe(HttpStatus.CREATED);
       expect(res.message).toBe('Break created successfully');
@@ -333,6 +341,7 @@ describe('ProviderController', () => {
         BREAK_ID,
         PROVIDER_ID,
         TENANT_ID,
+        adminUser,
       );
       expect(res.code).toBe(HttpStatus.OK);
       expect(res.message).toBe('Break deleted successfully');
@@ -351,25 +360,25 @@ describe('ProviderController', () => {
     it('throws when trying to update schedule', async () => {
       await expect(
         controller.updateSchedule(PROVIDER_ID, updateScheduleDto(), superAdmin),
-      ).rejects.toThrow();
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('throws when trying to get schedule', async () => {
       await expect(
         controller.getSchedule(PROVIDER_ID, superAdmin),
-      ).rejects.toThrow();
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('throws when trying to create break', async () => {
       await expect(
         controller.createBreak(PROVIDER_ID, createBreakDto(), superAdmin),
-      ).rejects.toThrow();
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
 
     it('throws when trying to delete break', async () => {
       await expect(
         controller.deleteBreak(PROVIDER_ID, BREAK_ID, superAdmin),
-      ).rejects.toThrow();
+      ).rejects.toBeInstanceOf(BadRequestException);
     });
   });
 });

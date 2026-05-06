@@ -5,10 +5,6 @@ export class CreateProviderDto {
   userId: string;
 
   @IsOptional()
-  @IsUUID()
-  tenantId?: string;
-
-  @IsOptional()
   @IsString()
   bio?: string;
 

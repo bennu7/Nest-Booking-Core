@@ -4,7 +4,12 @@ import request from 'supertest';
 import { createE2eApp } from '../helpers/app.helper';
 import { truncateDatabase } from '../helpers/db.helper';
 import { loginAs, randomTestIp } from '../helpers/auth.helper';
-import { seedAll, seedSuperAdmin, SeedResult, SEED_PASSWORD } from '../helpers/seed.helper';
+import {
+  seedAll,
+  seedSuperAdmin,
+  SeedResult,
+  SEED_PASSWORD,
+} from '../helpers/seed.helper';
 import { PrismaService } from 'src/prisma';
 
 describe('Auth (e2e)', () => {
@@ -103,7 +108,11 @@ describe('Auth (e2e)', () => {
         .post('/api/v1/auth/login')
         .set('user-agent', 'e2e-test')
         .set('X-Forwarded-For', randomTestIp())
-        .send({ email: seed.admin.email, password: SEED_PASSWORD, tenantId: seed.tenant.id })
+        .send({
+          email: seed.admin.email,
+          password: SEED_PASSWORD,
+          tenantId: seed.tenant.id,
+        })
         .expect(200);
 
       expect(res.body.code).toBe(200);
@@ -116,7 +125,11 @@ describe('Auth (e2e)', () => {
         .post('/api/v1/auth/login')
         .set('user-agent', 'e2e-test')
         .set('X-Forwarded-For', randomTestIp())
-        .send({ email: seed.admin.email, password: 'WrongPass999!', tenantId: seed.tenant.id })
+        .send({
+          email: seed.admin.email,
+          password: 'WrongPass999!',
+          tenantId: seed.tenant.id,
+        })
         .expect(401);
 
       expect(res.body.code).toBe(401);
@@ -149,7 +162,12 @@ describe('Auth (e2e)', () => {
 
   describe('POST /api/v1/auth/refresh-token', () => {
     it('200 — refresh valid → token pair baru', async () => {
-      const { refreshToken } = await loginAs(app, seed.admin.email, SEED_PASSWORD, seed.tenant.id);
+      const { refreshToken } = await loginAs(
+        app,
+        seed.admin.email,
+        SEED_PASSWORD,
+        seed.tenant.id,
+      );
 
       const res = await request(app.getHttpServer())
         .post('/api/v1/auth/refresh-token')
@@ -171,7 +189,12 @@ describe('Auth (e2e)', () => {
     });
 
     it('401 — refreshToken sudah di-revoke setelah logout', async () => {
-      const { refreshToken } = await loginAs(app, seed.admin.email, SEED_PASSWORD, seed.tenant.id);
+      const { refreshToken } = await loginAs(
+        app,
+        seed.admin.email,
+        SEED_PASSWORD,
+        seed.tenant.id,
+      );
 
       // logout dulu — revoke token
       await request(app.getHttpServer())
@@ -193,7 +216,12 @@ describe('Auth (e2e)', () => {
 
   describe('POST /api/v1/auth/logout', () => {
     it('200 — logout berhasil dengan token valid', async () => {
-      const { refreshToken } = await loginAs(app, seed.admin.email, SEED_PASSWORD, seed.tenant.id);
+      const { refreshToken } = await loginAs(
+        app,
+        seed.admin.email,
+        SEED_PASSWORD,
+        seed.tenant.id,
+      );
 
       const res = await request(app.getHttpServer())
         .post('/api/v1/auth/logout')
@@ -251,7 +279,12 @@ describe('Auth (e2e)', () => {
     });
 
     it('400 — DTO invalid (slug kurang dari 3 karakter)', async () => {
-      const { accessToken } = await loginAs(app, seed.admin.email, SEED_PASSWORD, seed.tenant.id);
+      const { accessToken } = await loginAs(
+        app,
+        seed.admin.email,
+        SEED_PASSWORD,
+        seed.tenant.id,
+      );
 
       const res = await request(app.getHttpServer())
         .post('/api/v1/auth/setup-tenant')
@@ -284,7 +317,12 @@ describe('Auth (e2e)', () => {
     });
 
     it('200 — ADMIN toggle user active kembali', async () => {
-      const { accessToken } = await loginAs(app, seed.admin.email, SEED_PASSWORD, seed.tenant.id);
+      const { accessToken } = await loginAs(
+        app,
+        seed.admin.email,
+        SEED_PASSWORD,
+        seed.tenant.id,
+      );
 
       // Nonaktifkan dulu lewat admin
       await request(app.getHttpServer())
@@ -304,7 +342,12 @@ describe('Auth (e2e)', () => {
     });
 
     it('403 — CUSTOMER tidak bisa toggle status', async () => {
-      const { accessToken } = await loginAs(app, seed.customer.email, SEED_PASSWORD, seed.tenant.id);
+      const { accessToken } = await loginAs(
+        app,
+        seed.customer.email,
+        SEED_PASSWORD,
+        seed.tenant.id,
+      );
 
       const res = await request(app.getHttpServer())
         .patch(`/api/v1/auth/users/${seed.admin.id}/status`)

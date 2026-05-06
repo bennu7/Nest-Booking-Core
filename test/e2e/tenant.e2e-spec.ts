@@ -29,8 +29,12 @@ describe('Tenant (e2e)', () => {
     seed = await seedAll(prisma);
     // SUPER_ADMIN tidak punya tenantId (null), ADMIN/CUSTOMER butuh tenantId
     superAdminToken = (await loginAs(app, seed.superAdmin.email)).accessToken;
-    adminToken = (await loginAs(app, seed.admin.email, 'Test1234!', seed.tenant.id)).accessToken;
-    customerToken = (await loginAs(app, seed.customer.email, 'Test1234!', seed.tenant.id)).accessToken;
+    adminToken = (
+      await loginAs(app, seed.admin.email, 'Test1234!', seed.tenant.id)
+    ).accessToken;
+    customerToken = (
+      await loginAs(app, seed.customer.email, 'Test1234!', seed.tenant.id)
+    ).accessToken;
   });
 
   // ─── POST /api/v1/tenants ─────────────────────────────────────────────────────

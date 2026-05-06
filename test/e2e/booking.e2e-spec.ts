@@ -4,11 +4,7 @@ import request from 'supertest';
 import { createE2eApp } from '../helpers/app.helper';
 import { truncateDatabase } from '../helpers/db.helper';
 import { loginAs } from '../helpers/auth.helper';
-import {
-  seedAll,
-  seedBooking,
-  SeedResult,
-} from '../helpers/seed.helper';
+import { seedAll, seedBooking, SeedResult } from '../helpers/seed.helper';
 import { PrismaService } from 'src/prisma';
 
 describe('Booking (e2e)', () => {
@@ -31,8 +27,12 @@ describe('Booking (e2e)', () => {
   beforeEach(async () => {
     await truncateDatabase(prisma);
     seed = await seedAll(prisma);
-    adminToken = (await loginAs(app, seed.admin.email, 'Test1234!', seed.tenant.id)).accessToken;
-    customerToken = (await loginAs(app, seed.customer.email, 'Test1234!', seed.tenant.id)).accessToken;
+    adminToken = (
+      await loginAs(app, seed.admin.email, 'Test1234!', seed.tenant.id)
+    ).accessToken;
+    customerToken = (
+      await loginAs(app, seed.customer.email, 'Test1234!', seed.tenant.id)
+    ).accessToken;
     superAdminToken = (await loginAs(app, seed.superAdmin.email)).accessToken;
   });
 

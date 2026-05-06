@@ -17,6 +17,10 @@ export const CATEGORY_ID = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
 export const BREAK_ID = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
 export const SCHEDULE_ID = '11111111-1111-1111-1111-111111111111';
 
+export const PROVIDER_USER_ID = '22222222-2222-2222-2222-222222222222';
+export const OTHER_PROVIDER_ID = '33333333-3333-3333-3333-333333333333';
+export const OTHER_USER_ID = '44444444-4444-4444-4444-444444444444';
+
 export function currentUserPayload(
   overrides: Partial<CurrentUserPayload> = {},
 ): CurrentUserPayload {
@@ -29,12 +33,23 @@ export function currentUserPayload(
   };
 }
 
+export function providerUserPayload(
+  overrides: Partial<CurrentUserPayload> = {},
+): CurrentUserPayload {
+  return {
+    id: PROVIDER_USER_ID,
+    email: 'provider@test.com',
+    role: UserRole.PROVIDER,
+    tenantId: TENANT_ID,
+    ...overrides,
+  };
+}
+
 export function createProviderDto(
   overrides: Partial<CreateProviderDto> = {},
 ): CreateProviderDto {
   return {
     userId: USER_ID,
-    tenantId: TENANT_ID,
     bio: 'Expert barber with 10 years experience',
     specialization: 'Hair cutting',
     ...overrides,

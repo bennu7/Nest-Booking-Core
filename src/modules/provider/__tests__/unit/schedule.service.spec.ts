@@ -1,15 +1,23 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 
 import { PrismaService } from 'src/prisma';
 import { ScheduleService } from '../../schedule.service';
 import {
   BREAK_ID,
+  OTHER_USER_ID,
   PROVIDER_ID,
   SCHEDULE_ID,
   TENANT_ID,
+  USER_ID,
   createBreakDto,
+  currentUserPayload,
   makeProviderProfile,
+  providerUserPayload,
   updateScheduleDto,
 } from '../fixtures/provider.fixture';
 
@@ -62,7 +70,12 @@ describe('ScheduleService', () => {
       prisma.providerProfile.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.updateSchedule(PROVIDER_ID, TENANT_ID, updateScheduleDto()),
+        service.updateSchedule(
+          PROVIDER_ID,
+          TENANT_ID,
+          updateScheduleDto(),
+          currentUserPayload(),
+        ),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -89,6 +102,7 @@ describe('ScheduleService', () => {
               },
             ],
           }),
+          currentUserPayload(),
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
@@ -111,6 +125,7 @@ describe('ScheduleService', () => {
               },
             ],
           }),
+          currentUserPayload(),
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
@@ -133,6 +148,7 @@ describe('ScheduleService', () => {
               },
             ],
           }),
+          currentUserPayload(),
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
@@ -151,6 +167,7 @@ describe('ScheduleService', () => {
         PROVIDER_ID,
         TENANT_ID,
         updateScheduleDto(),
+        currentUserPayload(),
       );
 
       expect(prisma.$transaction).toHaveBeenCalled();
@@ -159,6 +176,39 @@ describe('ScheduleService', () => {
       });
       expect(prisma.providerSchedule.createManyAndReturn).toHaveBeenCalled();
       expect(result).toEqual(schedules);
+    });
+
+    it('should allow PROVIDER to update their own schedule', async () => {
+      const providerUser = providerUserPayload({ id: USER_ID });
+      prisma.providerProfile.findUnique.mockResolvedValue(
+        makeProviderProfile({ userId: USER_ID }),
+      );
+      prisma.providerSchedule.deleteMany.mockResolvedValue({ count: 0 });
+      prisma.providerSchedule.createManyAndReturn.mockResolvedValue([]);
+
+      await service.updateSchedule(
+        PROVIDER_ID,
+        TENANT_ID,
+        updateScheduleDto(),
+        providerUser,
+      );
+      expect(prisma.$transaction).toHaveBeenCalled();
+    });
+
+    it('should throw ForbiddenException when PROVIDER tries to update another schedule', async () => {
+      const providerUser = providerUserPayload({ id: OTHER_USER_ID });
+      prisma.providerProfile.findUnique.mockResolvedValue(
+        makeProviderProfile({ userId: USER_ID }),
+      );
+
+      await expect(
+        service.updateSchedule(
+          PROVIDER_ID,
+          TENANT_ID,
+          updateScheduleDto(),
+          providerUser,
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
 
@@ -195,7 +245,12 @@ describe('ScheduleService', () => {
       prisma.providerProfile.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.createBreak(PROVIDER_ID, TENANT_ID, createBreakDto()),
+        service.createBreak(
+          PROVIDER_ID,
+          TENANT_ID,
+          createBreakDto(),
+          currentUserPayload(),
+        ),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -209,6 +264,7 @@ describe('ScheduleService', () => {
           PROVIDER_ID,
           TENANT_ID,
           createBreakDto({ isRecurring: true, dayOfWeek: undefined }),
+          currentUserPayload(),
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
@@ -227,6 +283,7 @@ describe('ScheduleService', () => {
             breakStart: undefined,
             breakEnd: undefined,
           }),
+          currentUserPayload(),
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
@@ -246,6 +303,7 @@ describe('ScheduleService', () => {
             breakStart: '1970-01-01T13:00:00.000Z',
             breakEnd: '1970-01-01T12:00:00.000Z',
           }),
+          currentUserPayload(),
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
@@ -266,6 +324,7 @@ describe('ScheduleService', () => {
         PROVIDER_ID,
         TENANT_ID,
         createBreakDto(),
+        currentUserPayload(),
       );
 
       expect(prisma.providerBreak.create).toHaveBeenCalledWith(
@@ -294,6 +353,7 @@ describe('ScheduleService', () => {
             dateStart: undefined,
             dateEnd: undefined,
           }),
+          currentUserPayload(),
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
@@ -312,6 +372,7 @@ describe('ScheduleService', () => {
             dateStart: '2024-06-10',
             dateEnd: '2024-06-05',
           }),
+          currentUserPayload(),
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
@@ -337,6 +398,7 @@ describe('ScheduleService', () => {
           dateStart: '2024-06-10',
           dateEnd: '2024-06-15',
         }),
+        currentUserPayload(),
       );
 
       expect(prisma.providerBreak.create).toHaveBeenCalledWith(
@@ -357,7 +419,12 @@ describe('ScheduleService', () => {
       prisma.providerProfile.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.deleteBreak(BREAK_ID, PROVIDER_ID, TENANT_ID),
+        service.deleteBreak(
+          BREAK_ID,
+          PROVIDER_ID,
+          TENANT_ID,
+          currentUserPayload(),
+        ),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -368,7 +435,12 @@ describe('ScheduleService', () => {
       prisma.providerBreak.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.deleteBreak(BREAK_ID, PROVIDER_ID, TENANT_ID),
+        service.deleteBreak(
+          BREAK_ID,
+          PROVIDER_ID,
+          TENANT_ID,
+          currentUserPayload(),
+        ),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(prisma.providerBreak.delete).not.toHaveBeenCalled();
     });
@@ -385,6 +457,7 @@ describe('ScheduleService', () => {
         BREAK_ID,
         PROVIDER_ID,
         TENANT_ID,
+        currentUserPayload(),
       );
 
       expect(prisma.providerBreak.delete).toHaveBeenCalledWith({
