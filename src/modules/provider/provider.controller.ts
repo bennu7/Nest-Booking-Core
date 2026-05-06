@@ -26,6 +26,7 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 import { UserRole } from '@generated/enums';
 import { CurrentUser } from 'src/common/decorators/current-user.decorator';
 import type { CurrentUserPayload } from 'src/common/decorators/current-user.decorator';
+import type { TenantContext } from 'src/common/interfaces/tenant-context.interface';
 
 @Controller({ path: 'providers', version: '1' })
 @UseGuards(ThrottlerGuard)
@@ -42,6 +43,13 @@ export class ProviderController {
       );
     }
     return user.tenantId;
+  }
+
+  private buildTenantContext(user: CurrentUserPayload): TenantContext {
+    return {
+      tenantId: this.requireTenantContext(user),
+      currentUser: user,
+    };
   }
 
   // ==================== PROVIDER PROFILE ====================
@@ -106,9 +114,9 @@ export class ProviderController {
     @Body() dto: UpdateProviderDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const tenantId = this.requireTenantContext(user);
+    const context = this.buildTenantContext(user);
 
-    const result = await this.providerService.update(id, dto, tenantId, user);
+    const result = await this.providerService.update(id, dto, context);
 
     return new ApiResponse({
       code: HttpStatus.OK,
@@ -126,13 +134,12 @@ export class ProviderController {
     @Body() dto: CreateServiceDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const tenantId = this.requireTenantContext(user);
+    const context = this.buildTenantContext(user);
 
     const result = await this.providerService.createService(
       providerId,
-      tenantId,
       dto,
-      user,
+      context,
     );
 
     return new ApiResponse({
@@ -175,15 +182,14 @@ export class ProviderController {
     @Body() dto: UpdateServiceDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const tenantId = this.requireTenantContext(user);
+    const context = this.buildTenantContext(user);
 
-    const result = await this.providerService.updateService(
+    const result = await this.providerService.updateService({
       serviceId,
       providerId,
-      tenantId,
       dto,
-      user,
-    );
+      context,
+    });
 
     return new ApiResponse({
       code: HttpStatus.OK,
@@ -199,14 +205,9 @@ export class ProviderController {
     @Param('serviceId') serviceId: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const tenantId = this.requireTenantContext(user);
+    const context = this.buildTenantContext(user);
 
-    await this.providerService.deleteService(
-      serviceId,
-      providerId,
-      tenantId,
-      user,
-    );
+    await this.providerService.deleteService(serviceId, providerId, context);
 
     return new ApiResponse({
       code: HttpStatus.OK,
@@ -223,13 +224,12 @@ export class ProviderController {
     @Body() dto: UpdateScheduleDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const tenantId = this.requireTenantContext(user);
+    const context = this.buildTenantContext(user);
 
     const result = await this.scheduleService.updateSchedule(
       providerId,
-      tenantId,
       dto,
-      user,
+      context,
     );
 
     return new ApiResponse({
@@ -270,13 +270,12 @@ export class ProviderController {
     @Body() dto: CreateBreakDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const tenantId = this.requireTenantContext(user);
+    const context = this.buildTenantContext(user);
 
     const result = await this.scheduleService.createBreak(
       providerId,
-      tenantId,
       dto,
-      user,
+      context,
     );
 
     return new ApiResponse({
@@ -293,9 +292,9 @@ export class ProviderController {
     @Param('breakId') breakId: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const tenantId = this.requireTenantContext(user);
+    const context = this.buildTenantContext(user);
 
-    await this.scheduleService.deleteBreak(breakId, providerId, tenantId, user);
+    await this.scheduleService.deleteBreak(breakId, providerId, context);
 
     return new ApiResponse({
       code: HttpStatus.OK,

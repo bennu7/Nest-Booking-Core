@@ -1,6 +1,7 @@
 import { UserRole } from '@generated/enums';
 
 import type { CurrentUserPayload } from 'src/common/decorators/current-user.decorator';
+import type { TenantContext } from 'src/common/interfaces/tenant-context.interface';
 
 import { CreateBreakDto } from '../../dto/create-break.dto';
 import { CreateProviderDto } from '../../dto/create-provider.dto';
@@ -170,6 +171,16 @@ export function makeUser(overrides: Record<string, unknown> = {}) {
     fullName: 'Test Provider',
     role: UserRole.PROVIDER,
     isActive: true,
+    ...overrides,
+  };
+}
+
+export function makeTenantContext(
+  overrides: Partial<TenantContext> = {},
+): TenantContext {
+  return {
+    tenantId: TENANT_ID,
+    currentUser: currentUserPayload(),
     ...overrides,
   };
 }

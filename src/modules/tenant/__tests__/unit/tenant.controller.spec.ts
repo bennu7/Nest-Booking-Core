@@ -130,12 +130,12 @@ describe('TenantController', () => {
 
       const res = await controller.toggleStatus(TENANT_ID, dto, superAdminUser);
 
-      expect(tenantService.toggleStatus).toHaveBeenCalledWith(
-        TENANT_ID,
-        false,
-        'Billing issue',
-        USER_ID,
-      );
+      expect(tenantService.toggleStatus).toHaveBeenCalledWith({
+        id: TENANT_ID,
+        isActive: false,
+        reason: 'Billing issue',
+        disabledBy: USER_ID,
+      });
       expect(res.code).toBe(HttpStatus.OK);
       expect(res.message).toBe('Tenant deactivated successfully');
       expect(res.data).toEqual(updated);

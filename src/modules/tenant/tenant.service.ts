@@ -13,6 +13,13 @@ import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 
+export interface ToggleTenantStatusParams {
+  id: string;
+  isActive: boolean;
+  reason?: string;
+  disabledBy?: string;
+}
+
 @Injectable()
 export class TenantService {
   constructor(private readonly prisma: PrismaService) {}
@@ -186,12 +193,8 @@ export class TenantService {
     return tenant;
   }
 
-  async toggleStatus(
-    id: string,
-    isActive: boolean,
-    reason?: string,
-    disabledBy?: string,
-  ) {
+  async toggleStatus(params: ToggleTenantStatusParams) {
+    const { id, isActive, reason, disabledBy } = params;
     const tenant = await this.prisma.tenant.findUnique({
       where: { id },
     });

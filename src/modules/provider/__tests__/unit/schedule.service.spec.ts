@@ -17,6 +17,7 @@ import {
   createBreakDto,
   currentUserPayload,
   makeProviderProfile,
+  makeTenantContext,
   providerUserPayload,
   updateScheduleDto,
 } from '../fixtures/provider.fixture';
@@ -72,9 +73,8 @@ describe('ScheduleService', () => {
       await expect(
         service.updateSchedule(
           PROVIDER_ID,
-          TENANT_ID,
           updateScheduleDto(),
-          currentUserPayload(),
+          makeTenantContext(),
         ),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
@@ -87,7 +87,6 @@ describe('ScheduleService', () => {
       await expect(
         service.updateSchedule(
           PROVIDER_ID,
-          TENANT_ID,
           updateScheduleDto({
             days: [
               {
@@ -102,7 +101,7 @@ describe('ScheduleService', () => {
               },
             ],
           }),
-          currentUserPayload(),
+          makeTenantContext(),
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
@@ -115,7 +114,6 @@ describe('ScheduleService', () => {
       await expect(
         service.updateSchedule(
           PROVIDER_ID,
-          TENANT_ID,
           updateScheduleDto({
             days: [
               {
@@ -125,7 +123,7 @@ describe('ScheduleService', () => {
               },
             ],
           }),
-          currentUserPayload(),
+          makeTenantContext(),
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
@@ -138,7 +136,6 @@ describe('ScheduleService', () => {
       await expect(
         service.updateSchedule(
           PROVIDER_ID,
-          TENANT_ID,
           updateScheduleDto({
             days: [
               {
@@ -148,7 +145,7 @@ describe('ScheduleService', () => {
               },
             ],
           }),
-          currentUserPayload(),
+          makeTenantContext(),
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
@@ -165,9 +162,8 @@ describe('ScheduleService', () => {
 
       const result = await service.updateSchedule(
         PROVIDER_ID,
-        TENANT_ID,
         updateScheduleDto(),
-        currentUserPayload(),
+        makeTenantContext(),
       );
 
       expect(prisma.$transaction).toHaveBeenCalled();
@@ -188,9 +184,8 @@ describe('ScheduleService', () => {
 
       await service.updateSchedule(
         PROVIDER_ID,
-        TENANT_ID,
         updateScheduleDto(),
-        providerUser,
+        makeTenantContext({ currentUser: providerUser }),
       );
       expect(prisma.$transaction).toHaveBeenCalled();
     });
@@ -204,9 +199,8 @@ describe('ScheduleService', () => {
       await expect(
         service.updateSchedule(
           PROVIDER_ID,
-          TENANT_ID,
           updateScheduleDto(),
-          providerUser,
+          makeTenantContext({ currentUser: providerUser }),
         ),
       ).rejects.toBeInstanceOf(ForbiddenException);
     });
@@ -245,12 +239,7 @@ describe('ScheduleService', () => {
       prisma.providerProfile.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.createBreak(
-          PROVIDER_ID,
-          TENANT_ID,
-          createBreakDto(),
-          currentUserPayload(),
-        ),
+        service.createBreak(PROVIDER_ID, createBreakDto(), makeTenantContext()),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -262,9 +251,8 @@ describe('ScheduleService', () => {
       await expect(
         service.createBreak(
           PROVIDER_ID,
-          TENANT_ID,
           createBreakDto({ isRecurring: true, dayOfWeek: undefined }),
-          currentUserPayload(),
+          makeTenantContext(),
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
@@ -277,13 +265,12 @@ describe('ScheduleService', () => {
       await expect(
         service.createBreak(
           PROVIDER_ID,
-          TENANT_ID,
           createBreakDto({
             isRecurring: true,
             breakStart: undefined,
             breakEnd: undefined,
           }),
-          currentUserPayload(),
+          makeTenantContext(),
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
@@ -296,14 +283,13 @@ describe('ScheduleService', () => {
       await expect(
         service.createBreak(
           PROVIDER_ID,
-          TENANT_ID,
           createBreakDto({
             isRecurring: true,
             dayOfWeek: 1,
             breakStart: '1970-01-01T13:00:00.000Z',
             breakEnd: '1970-01-01T12:00:00.000Z',
           }),
-          currentUserPayload(),
+          makeTenantContext(),
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
@@ -322,9 +308,8 @@ describe('ScheduleService', () => {
 
       const result = await service.createBreak(
         PROVIDER_ID,
-        TENANT_ID,
         createBreakDto(),
-        currentUserPayload(),
+        makeTenantContext(),
       );
 
       expect(prisma.providerBreak.create).toHaveBeenCalledWith(
@@ -347,13 +332,12 @@ describe('ScheduleService', () => {
       await expect(
         service.createBreak(
           PROVIDER_ID,
-          TENANT_ID,
           createBreakDto({
             isRecurring: false,
             dateStart: undefined,
             dateEnd: undefined,
           }),
-          currentUserPayload(),
+          makeTenantContext(),
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
@@ -366,13 +350,12 @@ describe('ScheduleService', () => {
       await expect(
         service.createBreak(
           PROVIDER_ID,
-          TENANT_ID,
           createBreakDto({
             isRecurring: false,
             dateStart: '2024-06-10',
             dateEnd: '2024-06-05',
           }),
-          currentUserPayload(),
+          makeTenantContext(),
         ),
       ).rejects.toBeInstanceOf(BadRequestException);
     });
@@ -392,13 +375,12 @@ describe('ScheduleService', () => {
 
       const result = await service.createBreak(
         PROVIDER_ID,
-        TENANT_ID,
         createBreakDto({
           isRecurring: false,
           dateStart: '2024-06-10',
           dateEnd: '2024-06-15',
         }),
-        currentUserPayload(),
+        makeTenantContext(),
       );
 
       expect(prisma.providerBreak.create).toHaveBeenCalledWith(
@@ -419,12 +401,7 @@ describe('ScheduleService', () => {
       prisma.providerProfile.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.deleteBreak(
-          BREAK_ID,
-          PROVIDER_ID,
-          TENANT_ID,
-          currentUserPayload(),
-        ),
+        service.deleteBreak(BREAK_ID, PROVIDER_ID, makeTenantContext()),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -435,12 +412,7 @@ describe('ScheduleService', () => {
       prisma.providerBreak.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.deleteBreak(
-          BREAK_ID,
-          PROVIDER_ID,
-          TENANT_ID,
-          currentUserPayload(),
-        ),
+        service.deleteBreak(BREAK_ID, PROVIDER_ID, makeTenantContext()),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(prisma.providerBreak.delete).not.toHaveBeenCalled();
     });
@@ -456,8 +428,7 @@ describe('ScheduleService', () => {
       const result = await service.deleteBreak(
         BREAK_ID,
         PROVIDER_ID,
-        TENANT_ID,
-        currentUserPayload(),
+        makeTenantContext(),
       );
 
       expect(prisma.providerBreak.delete).toHaveBeenCalledWith({

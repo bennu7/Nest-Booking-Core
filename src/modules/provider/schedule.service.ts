@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { UserRole } from '@generated/enums';
-import { CurrentUserPayload } from 'src/common/decorators/current-user.decorator';
+import { TenantContext } from 'src/common/interfaces/tenant-context.interface';
 import { PrismaService } from 'src/prisma';
 import { UpdateScheduleDto, CreateBreakDto } from './dto';
 
@@ -22,9 +22,9 @@ export class ScheduleService {
    */
   private async assertProviderOwnership(
     providerId: string,
-    tenantId: string,
-    currentUser: CurrentUserPayload,
+    context: TenantContext,
   ): Promise<void> {
+    const { tenantId, currentUser } = context;
     if (currentUser.role !== UserRole.PROVIDER) {
       // For non-providers (ADMIN/SA), we still need to verify the provider exists in this tenant
       const exists = await this.prisma.providerProfile.findUnique({
@@ -57,11 +57,10 @@ export class ScheduleService {
 
   async updateSchedule(
     providerId: string,
-    tenantId: string,
     dto: UpdateScheduleDto,
-    currentUser: CurrentUserPayload,
+    context: TenantContext,
   ) {
-    await this.assertProviderOwnership(providerId, tenantId, currentUser);
+    await this.assertProviderOwnership(providerId, context);
 
     const daySet = new Set(dto.days.map((d) => d.dayOfWeek));
 
@@ -129,11 +128,10 @@ export class ScheduleService {
 
   async createBreak(
     providerId: string,
-    tenantId: string,
     dto: CreateBreakDto,
-    currentUser: CurrentUserPayload,
+    context: TenantContext,
   ) {
-    await this.assertProviderOwnership(providerId, tenantId, currentUser);
+    await this.assertProviderOwnership(providerId, context);
 
     if (dto.isRecurring) {
       if (dto.dayOfWeek === undefined) {
@@ -194,10 +192,9 @@ export class ScheduleService {
   async deleteBreak(
     breakId: string,
     providerId: string,
-    tenantId: string,
-    currentUser: CurrentUserPayload,
+    context: TenantContext,
   ) {
-    await this.assertProviderOwnership(providerId, tenantId, currentUser);
+    await this.assertProviderOwnership(providerId, context);
 
     const breakRecord = await this.prisma.providerBreak.findFirst({
       where: { id: breakId, providerId },

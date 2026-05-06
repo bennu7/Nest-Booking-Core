@@ -5,7 +5,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { UserRole } from '@generated/enums';
-import { CurrentUserPayload } from 'src/common/decorators/current-user.decorator';
 import { PrismaService } from 'src/prisma';
 import {
   CreateProviderDto,
@@ -13,6 +12,14 @@ import {
   CreateServiceDto,
   UpdateServiceDto,
 } from './dto';
+import { TenantContext } from 'src/common/interfaces/tenant-context.interface';
+
+export interface UpdateServiceParams {
+  serviceId: string;
+  providerId: string;
+  dto: UpdateServiceDto;
+  context: TenantContext;
+}
 
 @Injectable()
 export class ProviderService {
@@ -27,9 +34,9 @@ export class ProviderService {
    */
   private async assertProviderOwnership(
     providerId: string,
-    tenantId: string,
-    currentUser: CurrentUserPayload,
+    context: TenantContext,
   ): Promise<void> {
+    const { tenantId, currentUser } = context;
     if (currentUser.role !== UserRole.PROVIDER) {
       // For non-providers (ADMIN/SA), we still need to verify the provider exists in this tenant
       const exists = await this.prisma.providerProfile.findUnique({
@@ -142,16 +149,11 @@ export class ProviderService {
     return provider;
   }
 
-  async update(
-    id: string,
-    dto: UpdateProviderDto,
-    tenantId: string,
-    currentUser: CurrentUserPayload,
-  ) {
-    await this.assertProviderOwnership(id, tenantId, currentUser);
+  async update(id: string, dto: UpdateProviderDto, context: TenantContext) {
+    await this.assertProviderOwnership(id, context);
 
     return this.prisma.providerProfile.update({
-      where: { id, tenantId },
+      where: { id, tenantId: context.tenantId },
       data: {
         ...(dto.bio !== undefined && { bio: dto.bio }),
         ...(dto.specialization !== undefined && {
@@ -166,15 +168,14 @@ export class ProviderService {
 
   async createService(
     providerId: string,
-    tenantId: string,
     dto: CreateServiceDto,
-    currentUser: CurrentUserPayload,
+    context: TenantContext,
   ) {
-    await this.assertProviderOwnership(providerId, tenantId, currentUser);
+    await this.assertProviderOwnership(providerId, context);
 
     if (dto.categoryId) {
       const category = await this.prisma.serviceCategory.findUnique({
-        where: { id: dto.categoryId, tenantId },
+        where: { id: dto.categoryId, tenantId: context.tenantId },
       });
 
       if (!category) {
@@ -220,14 +221,9 @@ export class ProviderService {
     });
   }
 
-  async updateService(
-    serviceId: string,
-    providerId: string,
-    tenantId: string,
-    dto: UpdateServiceDto,
-    currentUser: CurrentUserPayload,
-  ) {
-    await this.assertProviderOwnership(providerId, tenantId, currentUser);
+  async updateService(params: UpdateServiceParams) {
+    const { serviceId, providerId, dto, context } = params;
+    await this.assertProviderOwnership(providerId, context);
 
     const service = await this.prisma.service.findFirst({
       where: { id: serviceId, providerId },
@@ -239,7 +235,7 @@ export class ProviderService {
 
     if (dto.categoryId) {
       const category = await this.prisma.serviceCategory.findUnique({
-        where: { id: dto.categoryId, tenantId },
+        where: { id: dto.categoryId, tenantId: context.tenantId },
       });
 
       if (!category) {
@@ -272,10 +268,9 @@ export class ProviderService {
   async deleteService(
     serviceId: string,
     providerId: string,
-    tenantId: string,
-    currentUser: CurrentUserPayload,
+    context: TenantContext,
   ) {
-    await this.assertProviderOwnership(providerId, tenantId, currentUser);
+    await this.assertProviderOwnership(providerId, context);
 
     const service = await this.prisma.service.findFirst({
       where: { id: serviceId, providerId },

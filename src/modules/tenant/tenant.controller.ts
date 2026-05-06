@@ -160,12 +160,12 @@ export class TenantController {
     @Body() dto: ToggleStatusDto,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const result = await this.tenantService.toggleStatus(
+    const result = await this.tenantService.toggleStatus({
       id,
-      dto.isActive,
-      dto.reason,
-      user.id,
-    );
+      isActive: dto.isActive,
+      reason: dto.reason,
+      disabledBy: user.id,
+    });
 
     return new ApiResponse({
       code: HttpStatus.OK,

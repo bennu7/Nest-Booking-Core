@@ -250,7 +250,12 @@ describe('TenantService', () => {
       prisma.tenant.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.toggleStatus(TENANT_ID, false, 'Billing issue', USER_ID),
+        service.toggleStatus({
+          id: TENANT_ID,
+          isActive: false,
+          reason: 'Billing issue',
+          disabledBy: USER_ID,
+        }),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(prisma.tenant.update).not.toHaveBeenCalled();
     });
@@ -259,7 +264,12 @@ describe('TenantService', () => {
       prisma.tenant.findUnique.mockResolvedValue(makeTenant());
       prisma.tenant.update.mockResolvedValue(makeTenant({ isActive: false }));
 
-      await service.toggleStatus(TENANT_ID, false, 'Billing issue', USER_ID);
+      await service.toggleStatus({
+        id: TENANT_ID,
+        isActive: false,
+        reason: 'Billing issue',
+        disabledBy: USER_ID,
+      });
 
       expect(prisma.tenant.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -282,7 +292,7 @@ describe('TenantService', () => {
       );
       prisma.tenant.update.mockResolvedValue(makeTenant({ isActive: true }));
 
-      await service.toggleStatus(TENANT_ID, true);
+      await service.toggleStatus({ id: TENANT_ID, isActive: true });
 
       expect(prisma.tenant.update).toHaveBeenCalledWith(
         expect.objectContaining({

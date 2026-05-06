@@ -19,6 +19,7 @@ import {
   currentUserPayload,
   makeProviderProfile,
   makeService,
+  makeTenantContext,
   updateProviderDto,
   updateScheduleDto,
   updateServiceDto,
@@ -163,8 +164,7 @@ describe('ProviderController', () => {
       expect(providerService.update).toHaveBeenCalledWith(
         PROVIDER_ID,
         dto,
-        TENANT_ID,
-        adminUser,
+        makeTenantContext(),
       );
       expect(res.code).toBe(HttpStatus.OK);
       expect(res.message).toBe('Provider updated successfully');
@@ -184,9 +184,8 @@ describe('ProviderController', () => {
 
       expect(providerService.createService).toHaveBeenCalledWith(
         PROVIDER_ID,
-        TENANT_ID,
         dto,
-        adminUser,
+        makeTenantContext(),
       );
       expect(res.code).toBe(HttpStatus.CREATED);
       expect(res.message).toBe('Service created successfully');
@@ -227,13 +226,12 @@ describe('ProviderController', () => {
         adminUser,
       );
 
-      expect(providerService.updateService).toHaveBeenCalledWith(
-        SERVICE_ID,
-        PROVIDER_ID,
-        TENANT_ID,
+      expect(providerService.updateService).toHaveBeenCalledWith({
+        serviceId: SERVICE_ID,
+        providerId: PROVIDER_ID,
         dto,
-        adminUser,
-      );
+        context: makeTenantContext(),
+      });
       expect(res.code).toBe(HttpStatus.OK);
       expect(res.message).toBe('Service updated successfully');
       expect(res.data).toEqual(updated);
@@ -255,8 +253,7 @@ describe('ProviderController', () => {
       expect(providerService.deleteService).toHaveBeenCalledWith(
         SERVICE_ID,
         PROVIDER_ID,
-        TENANT_ID,
-        adminUser,
+        makeTenantContext(),
       );
       expect(res.code).toBe(HttpStatus.OK);
       expect(res.message).toBe('Service deleted successfully');
@@ -275,9 +272,8 @@ describe('ProviderController', () => {
 
       expect(scheduleService.updateSchedule).toHaveBeenCalledWith(
         PROVIDER_ID,
-        TENANT_ID,
         dto,
-        adminUser,
+        makeTenantContext(),
       );
       expect(res.code).toBe(HttpStatus.OK);
       expect(res.message).toBe('Schedule updated successfully');
@@ -315,9 +311,8 @@ describe('ProviderController', () => {
 
       expect(scheduleService.createBreak).toHaveBeenCalledWith(
         PROVIDER_ID,
-        TENANT_ID,
         dto,
-        adminUser,
+        makeTenantContext(),
       );
       expect(res.code).toBe(HttpStatus.CREATED);
       expect(res.message).toBe('Break created successfully');
@@ -340,8 +335,7 @@ describe('ProviderController', () => {
       expect(scheduleService.deleteBreak).toHaveBeenCalledWith(
         BREAK_ID,
         PROVIDER_ID,
-        TENANT_ID,
-        adminUser,
+        makeTenantContext(),
       );
       expect(res.code).toBe(HttpStatus.OK);
       expect(res.message).toBe('Break deleted successfully');
