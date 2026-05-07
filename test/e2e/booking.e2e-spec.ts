@@ -284,4 +284,377 @@ describe('Booking (e2e)', () => {
       expect(res.body.code).toBe(401);
     });
   });
+
+  // ─── POST /api/v1/bookings ────────────────────────────────────────────────
+
+  describe('POST /api/v1/bookings', () => {
+    const getTomorrow9am = () => {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      d.setHours(9, 0, 0, 0);
+      return d.toISOString();
+    };
+
+    const getTomorrow10am = () => {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      d.setHours(10, 0, 0, 0);
+      return d.toISOString();
+    };
+
+    it('201 — CUSTOMER create booking dari slot hold berhasil', async () => {
+      // 1. Create slot hold
+      const holdRes = await request(app.getHttpServer())
+        .post('/api/v1/bookings/slot-holds')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({
+          providerId: seed.providerProfile.id,
+          serviceId: seed.service.id,
+          startTime: getTomorrow9am(),
+          endTime: getTomorrow10am(),
+        })
+        .expect(201);
+
+      const slotHoldId = holdRes.body.data.id;
+
+      // 2. Create booking
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/bookings')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({
+          slotHoldId,
+          notes: 'E2E Booking Notes',
+        })
+        .expect(201);
+
+      expect(res.body.code).toBe(201);
+      expect(res.body.data).toMatchObject({
+        customerId: seed.customer.id,
+        status: 'PENDING',
+      });
+
+      // 3. Verifikasi SlotHold sudah isConverted=true
+      const hold = await prisma.slotHold.findUnique({
+        where: { id: slotHoldId },
+      });
+      expect(hold?.isConverted).toBe(true);
+    });
+
+    it('404 — SlotHold sudah dikonversi → ditolak', async () => {
+      // 1. Create slot hold
+      const holdRes = await request(app.getHttpServer())
+        .post('/api/v1/bookings/slot-holds')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({
+          providerId: seed.providerProfile.id,
+          serviceId: seed.service.id,
+          startTime: getTomorrow9am(),
+          endTime: getTomorrow10am(),
+        })
+        .expect(201);
+
+      const slotHoldId = holdRes.body.data.id;
+
+      // 2. Create booking pertama
+      await request(app.getHttpServer())
+        .post('/api/v1/bookings')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({ slotHoldId })
+        .expect(201);
+
+      // 3. Create booking kedua dengan ID yang sama
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/bookings')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({ slotHoldId })
+        .expect(404);
+
+      expect(res.body.code).toBe(404);
+    });
+
+    it('403 — ADMIN tidak bisa create booking', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/bookings')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ slotHoldId: '00000000-0000-0000-0000-000000000000' })
+        .expect(403);
+    });
+
+    it('400 — Konflik dengan booking yang ada', async () => {
+      // 1. Create existing booking di jam besok 09:00 - 10:00
+      await seedBooking(
+        prisma,
+        {
+          tenantId: seed.tenant.id,
+          customerId: seed.customer.id,
+          providerId: seed.providerProfile.id,
+          serviceId: seed.service.id,
+        },
+        {
+          startTime: new Date(getTomorrow9am()),
+          endTime: new Date(getTomorrow10am()),
+          status: 'CONFIRMED',
+        },
+      );
+
+      // 2. Create slot hold di jam yang sama (logic slot hold mungkin belum cek booking conflict secara ketat di service-nya, tapi BookingService harus cek)
+      const holdRes = await request(app.getHttpServer())
+        .post('/api/v1/bookings/slot-holds')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({
+          providerId: seed.providerProfile.id,
+          serviceId: seed.service.id,
+          startTime: getTomorrow9am(),
+          endTime: getTomorrow10am(),
+        })
+        .expect(201);
+
+      const slotHoldId = holdRes.body.data.id;
+
+      // 3. Create booking → harusnya konflik
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/bookings')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({ slotHoldId })
+        .expect(400);
+
+      expect(res.body.message).toContain('conflict');
+    });
+  });
+
+  // ─── PATCH /api/v1/bookings/:id/confirm ───────────────────────────────────
+
+  describe('PATCH /api/v1/bookings/:id/confirm', () => {
+    it('200 — ADMIN confirm booking berhasil', async () => {
+      // 1. Seed PENDING booking
+      const booking = await seedBooking(
+        prisma,
+        {
+          tenantId: seed.tenant.id,
+          customerId: seed.customer.id,
+          providerId: seed.providerProfile.id,
+          serviceId: seed.service.id,
+        },
+        { status: 'PENDING' },
+      );
+
+      const res = await request(app.getHttpServer())
+        .patch(`/api/v1/bookings/${booking.id}/confirm`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ reason: 'Confirmed by E2E' })
+        .expect(200);
+
+      expect(res.body.data.status).toBe('CONFIRMED');
+
+      // 3. Verifikasi log
+      const log = await prisma.bookingStatusLog.findFirst({
+        where: { bookingId: booking.id, newStatus: 'CONFIRMED' },
+      });
+      expect(log).toBeDefined();
+    });
+
+    it('403 — CUSTOMER tidak bisa confirm booking', async () => {
+      const booking = await seedBooking(
+        prisma,
+        {
+          tenantId: seed.tenant.id,
+          customerId: seed.customer.id,
+          providerId: seed.providerProfile.id,
+          serviceId: seed.service.id,
+        },
+        { status: 'PENDING' },
+      );
+
+      await request(app.getHttpServer())
+        .patch(`/api/v1/bookings/${booking.id}/confirm`)
+        .set('Authorization', `Bearer ${customerToken}`)
+        .expect(403);
+    });
+
+    it('400 — Confirm booking yang sudah CANCELLED', async () => {
+      const booking = await seedBooking(
+        prisma,
+        {
+          tenantId: seed.tenant.id,
+          customerId: seed.customer.id,
+          providerId: seed.providerProfile.id,
+          serviceId: seed.service.id,
+        },
+        { status: 'CANCELLED' },
+      );
+
+      const res = await request(app.getHttpServer())
+        .patch(`/api/v1/bookings/${booking.id}/confirm`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(res.body.message).toContain('PENDING');
+    });
+  });
+
+  // ─── PATCH /api/v1/bookings/:id/cancel ────────────────────────────────────
+
+  describe('PATCH /api/v1/bookings/:id/cancel', () => {
+    it('200 — CUSTOMER cancel booking berhasil (free)', async () => {
+      // 1. Seed booking 2 hari lagi
+      const tomorrow2 = new Date();
+      tomorrow2.setDate(tomorrow2.getDate() + 2);
+      tomorrow2.setHours(9, 0, 0, 0);
+
+      const booking = await seedBooking(
+        prisma,
+        {
+          tenantId: seed.tenant.id,
+          customerId: seed.customer.id,
+          providerId: seed.providerProfile.id,
+          serviceId: seed.service.id,
+        },
+        { startTime: tomorrow2, status: 'PENDING' },
+      );
+
+      // 2. Seed cancellation policy (24h free)
+      await prisma.cancellationPolicy.create({
+        data: {
+          tenantId: seed.tenant.id,
+          name: 'Free 24h',
+          hoursBeforeFree: 24,
+          lateCancelCharge: '10.50',
+          isDefault: true,
+        },
+      });
+
+      // 3. Cancel
+      const res = await request(app.getHttpServer())
+        .patch(`/api/v1/bookings/${booking.id}/cancel`)
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({ reason: 'E2E Free Cancel' })
+        .expect(200);
+
+      expect(res.body.data.status).toBe('CANCELLED');
+
+      // 4. Verifikasi log metadata kosong (free)
+      const log = await prisma.bookingStatusLog.findFirst({
+        where: { bookingId: booking.id, newStatus: 'CANCELLED' },
+      });
+      expect(log?.metadata).toEqual({});
+    });
+
+    it('200 — CUSTOMER cancel booking dengan late fee', async () => {
+      // 1. Seed booking 2 jam lagi
+      const soon = new Date();
+      soon.setHours(soon.getHours() + 2);
+
+      const booking = await seedBooking(
+        prisma,
+        {
+          tenantId: seed.tenant.id,
+          customerId: seed.customer.id,
+          providerId: seed.providerProfile.id,
+          serviceId: seed.service.id,
+        },
+        { startTime: soon, status: 'PENDING' },
+      );
+
+      // (Policy sudah ada dari test sebelumnya karena truncateDatabase dipanggil di beforeEach,
+      //  tapi di sini kita buat policy baru jika perlu. Namun beforeEach memanggil truncateDatabase,
+      //  jadi kita harus buat lagi)
+      await prisma.cancellationPolicy.create({
+        data: {
+          tenantId: seed.tenant.id,
+          name: 'Free 24h',
+          hoursBeforeFree: 24,
+          lateCancelCharge: '10.50',
+          isDefault: true,
+        },
+      });
+
+      // 2. Cancel
+      const res = await request(app.getHttpServer())
+        .patch(`/api/v1/bookings/${booking.id}/cancel`)
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({ reason: 'E2E Late Cancel' })
+        .expect(200);
+
+      expect(res.body.data.status).toBe('CANCELLED');
+
+      // 3. Verifikasi log metadata ada lateFee
+      const log = await prisma.bookingStatusLog.findFirst({
+        where: { bookingId: booking.id, newStatus: 'CANCELLED' },
+      });
+      expect(log?.metadata).toMatchObject({ lateFee: 10.5 });
+    });
+
+    it('200 — ADMIN cancel booking berhasil', async () => {
+      const booking = await seedBooking(prisma, {
+        tenantId: seed.tenant.id,
+        customerId: seed.customer.id,
+        providerId: seed.providerProfile.id,
+        serviceId: seed.service.id,
+      });
+
+      await request(app.getHttpServer())
+        .patch(`/api/v1/bookings/${booking.id}/cancel`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ reason: 'Admin override' })
+        .expect(200);
+    });
+  });
+
+  // ─── PATCH /api/v1/bookings/:id/complete ──────────────────────────────────
+
+  describe('PATCH /api/v1/bookings/:id/complete', () => {
+    it('200 — ADMIN complete booking berhasil', async () => {
+      const booking = await seedBooking(
+        prisma,
+        {
+          tenantId: seed.tenant.id,
+          customerId: seed.customer.id,
+          providerId: seed.providerProfile.id,
+          serviceId: seed.service.id,
+        },
+        { status: 'CONFIRMED' },
+      );
+
+      const res = await request(app.getHttpServer())
+        .patch(`/api/v1/bookings/${booking.id}/complete`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body.data.status).toBe('COMPLETED');
+    });
+
+    it('403 — CUSTOMER tidak bisa complete booking', async () => {
+      const booking = await seedBooking(
+        prisma,
+        {
+          tenantId: seed.tenant.id,
+          customerId: seed.customer.id,
+          providerId: seed.providerProfile.id,
+          serviceId: seed.service.id,
+        },
+        { status: 'CONFIRMED' },
+      );
+
+      await request(app.getHttpServer())
+        .patch(`/api/v1/bookings/${booking.id}/complete`)
+        .set('Authorization', `Bearer ${customerToken}`)
+        .expect(403);
+    });
+
+    it('400 — Complete booking yang masih PENDING', async () => {
+      const booking = await seedBooking(prisma, {
+        tenantId: seed.tenant.id,
+        customerId: seed.customer.id,
+        providerId: seed.providerProfile.id,
+        serviceId: seed.service.id,
+      });
+
+      const res = await request(app.getHttpServer())
+        .patch(`/api/v1/bookings/${booking.id}/complete`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+
+      expect(res.body.message).toContain('PENDING');
+    });
+  });
 });

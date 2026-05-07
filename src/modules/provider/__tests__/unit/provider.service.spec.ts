@@ -49,6 +49,16 @@ function createPrismaMock() {
     },
     booking: {
       count: jest.fn(),
+      findMany: jest.fn(),
+    },
+    providerSchedule: {
+      findUnique: jest.fn(),
+    },
+    providerBreak: {
+      findMany: jest.fn(),
+    },
+    slotHold: {
+      findMany: jest.fn(),
     },
   };
 }
@@ -471,6 +481,57 @@ describe('ProviderService', () => {
         where: { id: SERVICE_ID },
       });
       expect(result).toBeDefined();
+    });
+  });
+
+  // ─── getAvailability ───────────────────────────────────────────────────────
+
+  describe('getAvailability', () => {
+    it('throws NotFoundException when provider not found', async () => {
+      prisma.providerProfile.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.getAvailability(PROVIDER_ID, { date: '2026-05-10' }, TENANT_ID),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('returns empty array when schedule not found', async () => {
+      prisma.providerProfile.findUnique.mockResolvedValue(
+        makeProviderProfile(),
+      );
+      prisma.providerSchedule.findUnique.mockResolvedValue(null);
+
+      const result = await service.getAvailability(
+        PROVIDER_ID,
+        { date: '2026-05-10' },
+        TENANT_ID,
+      );
+
+      expect(result).toEqual([]);
+    });
+
+    it('calculates slots correctly when schedule exists', async () => {
+      prisma.providerProfile.findUnique.mockResolvedValue(
+        makeProviderProfile(),
+      );
+      prisma.providerSchedule.findUnique.mockResolvedValue({
+        startTime: new Date('1970-01-01T08:00:00Z'),
+        endTime: new Date('1970-01-01T10:00:00Z'),
+        isActive: true,
+      });
+      prisma.providerBreak.findMany.mockResolvedValue([]);
+      prisma.booking.findMany.mockResolvedValue([]);
+      prisma.slotHold.findMany.mockResolvedValue([]);
+
+      const result = await service.getAvailability(
+        PROVIDER_ID,
+        { date: '2026-05-10' },
+        TENANT_ID,
+      );
+
+      // 08:00-09:00, 09:00-10:00 (duration 60m, buffer 0)
+      expect(result).toHaveLength(2);
+      expect(result[0].startTime.getUTCHours()).toBe(8);
     });
   });
 });

@@ -24,6 +24,7 @@ export interface SeedResult {
   providerProfile: Awaited<ReturnType<typeof seedProviderProfile>>;
   service: Awaited<ReturnType<typeof seedService>>;
   schedule: Awaited<ReturnType<typeof seedSchedule>>;
+  cancellationPolicy: Awaited<ReturnType<typeof seedCancellationPolicy>>;
 }
 
 // ─── Level 0: tanpa FK ───────────────────────────────────────────────────────
@@ -141,6 +142,24 @@ export async function seedCategory(
       description: 'Test category',
       sortOrder: 0,
       isActive: true,
+      ...overrides,
+    },
+  });
+}
+
+export async function seedCancellationPolicy(
+  prisma: PrismaService,
+  tenantId: string,
+  overrides: Record<string, unknown> = {},
+) {
+  return prisma.cancellationPolicy.create({
+    data: {
+      tenantId,
+      name: 'Standard Policy',
+      hoursBeforeFree: 24,
+      lateCancelCharge: 50.0,
+      noShowCharge: 100.0,
+      isDefault: true,
       ...overrides,
     },
   });
@@ -329,6 +348,7 @@ export async function seedAll(prisma: PrismaService): Promise<SeedResult> {
     categoryId: category.id,
   });
   const schedule = await seedSchedule(prisma, providerProfile.id);
+  const cancellationPolicy = await seedCancellationPolicy(prisma, tenant.id);
 
   return {
     tenant,
@@ -340,5 +360,6 @@ export async function seedAll(prisma: PrismaService): Promise<SeedResult> {
     providerProfile,
     service,
     schedule,
+    cancellationPolicy,
   };
 }

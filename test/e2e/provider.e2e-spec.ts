@@ -479,4 +479,46 @@ describe('Provider (e2e)', () => {
       expect(res.body.code).toBe(403);
     });
   });
+
+  // ─── GET /api/v1/providers/:id/availability ───────────────────────────────
+
+  describe('GET /api/v1/providers/:id/availability', () => {
+    it('200 — CUSTOMER get availability berhasil', async () => {
+      // Setup schedule dulu biar ada slot
+      await request(app.getHttpServer())
+        .patch(`/api/v1/providers/${seed.providerProfile.id}/schedule`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          days: [
+            {
+              dayOfWeek: new Date().getDay(), // Hari ini
+              startTime: '1970-01-01T08:00:00.000Z',
+              endTime: '1970-01-01T17:00:00.000Z',
+              isActive: true,
+            },
+          ],
+        })
+        .expect(200);
+
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/providers/${seed.providerProfile.id}/availability`)
+        .query({ date: todayStr })
+        .set('Authorization', `Bearer ${customerToken}`)
+        .expect(200);
+
+      expect(res.body.code).toBe(200);
+      expect(Array.isArray(res.body.data)).toBe(true);
+    });
+
+    it('400 — Tanpa date query param → error', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/providers/${seed.providerProfile.id}/availability`)
+        .set('Authorization', `Bearer ${customerToken}`)
+        .expect(400);
+
+      expect(res.body.message).toBeDefined();
+    });
+  });
 });

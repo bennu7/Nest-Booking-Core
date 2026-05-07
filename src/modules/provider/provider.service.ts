@@ -11,7 +11,10 @@ import {
   UpdateProviderDto,
   CreateServiceDto,
   UpdateServiceDto,
+  GetAvailabilityDto,
 } from './dto';
+import { calculateAvailableSlots } from 'src/common/utils/slot-calculator.util';
+import { startOfDay, endOfDay } from 'date-fns';
 import { TenantContext } from 'src/common/interfaces/tenant-context.interface';
 
 export interface UpdateServiceParams {
@@ -295,6 +298,113 @@ export class ProviderService {
 
     return this.prisma.service.delete({
       where: { id: serviceId },
+    });
+  }
+
+  // ==================== AVAILABILITY ====================
+
+  async getAvailability(
+    providerId: string,
+    query: GetAvailabilityDto,
+    tenantId: string,
+  ) {
+    const targetDate = new Date(query.date);
+    const dayOfWeek = targetDate.getDay();
+
+    const provider = await this.prisma.providerProfile.findUnique({
+      where: { id: providerId, tenantId },
+    });
+
+    if (!provider) {
+      throw new NotFoundException('Provider not found');
+    }
+
+    // 1. Ambil jadwal provider untuk hari tersebut
+    const schedule = await this.prisma.providerSchedule.findUnique({
+      where: {
+        providerId_dayOfWeek: {
+          providerId,
+          dayOfWeek,
+        },
+      },
+    });
+
+    if (!schedule || !schedule.isActive) {
+      return [];
+    }
+
+    // 2. Ambil break recurring untuk hari tersebut
+    const breaks = await this.prisma.providerBreak.findMany({
+      where: {
+        providerId,
+        OR: [
+          { isRecurring: true, dayOfWeek },
+          {
+            isRecurring: false,
+            dateStart: { lte: targetDate },
+            dateEnd: { gte: targetDate },
+          },
+        ],
+      },
+    });
+
+    // 3. Ambil booking yang ada pada tanggal tersebut
+    const existingBookings = await this.prisma.booking.findMany({
+      where: {
+        providerId,
+        status: { not: 'CANCELLED' },
+        startTime: {
+          gte: startOfDay(targetDate),
+          lte: endOfDay(targetDate),
+        },
+      },
+      select: { startTime: true, endTime: true },
+    });
+
+    // 4. Ambil slot holds yang aktif
+    const existingHolds = await this.prisma.slotHold.findMany({
+      where: {
+        providerId,
+        isConverted: false,
+        expiresAt: { gt: new Date() },
+        startTime: {
+          gte: startOfDay(targetDate),
+          lte: endOfDay(targetDate),
+        },
+      },
+      select: { startTime: true, endTime: true },
+    });
+
+    // 5. Tentukan durasi layanan (default ke 60 menit jika tidak ada serviceId)
+    let duration = 60;
+    let buffer = 0;
+
+    if (query.serviceId) {
+      const service = await this.prisma.service.findUnique({
+        where: { id: query.serviceId, providerId },
+      });
+      if (service) {
+        duration = service.durationMinutes;
+        buffer = service.bufferMinutes;
+      }
+    }
+
+    // 6. Hitung slot
+    return calculateAvailableSlots({
+      date: targetDate,
+      schedule: {
+        startTime: schedule.startTime,
+        endTime: schedule.endTime,
+        isActive: schedule.isActive,
+      },
+      breaks: breaks.map((b) => ({
+        breakStart: b.breakStart,
+        breakEnd: b.breakEnd,
+      })),
+      existingBookings,
+      existingHolds,
+      serviceDurationMinutes: duration,
+      bufferMinutes: buffer,
     });
   }
 }

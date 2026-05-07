@@ -38,24 +38,14 @@ describe('Cross-Module Flows (e2e)', () => {
 
   // ─── Flow 1: Full Booking Lifecycle ─────────────────────────────────────────
 
-  it('Flow 1 — full booking lifecycle: slot hold oleh customer', async () => {
-    // Login sebagai ADMIN (sudah ada tenant dari seed)
+  it('Flow 1 — full booking lifecycle: hold → pending → confirmed → completed', async () => {
+    // 1. Login sebagai ADMIN & CUSTOMER
     const { accessToken: adminToken } = await loginAs(
       app,
       seed.admin.email,
       SEED_PASSWORD,
       seed.tenant.id,
     );
-
-    // Verifikasi provider sudah ada di tenant
-    const providerListRes = await request(app.getHttpServer())
-      .get('/api/v1/providers')
-      .set('Authorization', `Bearer ${adminToken}`)
-      .expect(200);
-
-    expect(providerListRes.body.data.length).toBeGreaterThanOrEqual(1);
-
-    // Login sebagai CUSTOMER
     const { accessToken: customerToken } = await loginAs(
       app,
       seed.customer.email,
@@ -63,12 +53,12 @@ describe('Cross-Module Flows (e2e)', () => {
       seed.tenant.id,
     );
 
-    // Customer buat slot hold
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(9, 0, 0, 0);
-    const endTime = new Date(tomorrow);
-    endTime.setHours(10, 0, 0, 0);
+    // 2. Customer buat slot hold (Gunakan waktu lusa jam 11 agar aman)
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 2);
+    futureDate.setHours(11, 0, 0, 0);
+    const futureEnd = new Date(futureDate);
+    futureEnd.setHours(12, 0, 0, 0);
 
     const holdRes = await request(app.getHttpServer())
       .post('/api/v1/bookings/slot-holds')
@@ -76,21 +66,52 @@ describe('Cross-Module Flows (e2e)', () => {
       .send({
         providerId: seed.providerProfile.id,
         serviceId: seed.service.id,
-        startTime: tomorrow.toISOString(),
-        endTime: endTime.toISOString(),
+        startTime: futureDate.toISOString(),
+        endTime: futureEnd.toISOString(),
       })
       .expect(201);
 
-    expect(holdRes.body.code).toBe(201);
     const holdId = holdRes.body.data.id;
-    expect(holdId).toBeDefined();
 
-    // Verifikasi slot hold ada di DB
-    const slotHold = await prisma.slotHold.findUnique({
-      where: { id: holdId },
+    // 3. Customer convert hold ke booking (PENDING)
+    const bookingRes = await request(app.getHttpServer())
+      .post('/api/v1/bookings')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .send({
+        slotHoldId: holdId,
+      })
+      .expect(201);
+
+    const bookingId = bookingRes.body.data.id;
+    expect(bookingRes.body.data.status).toBe('PENDING');
+
+    // 4. Admin confirm booking (CONFIRMED)
+    const confirmRes = await request(app.getHttpServer())
+      .patch(`/api/v1/bookings/${bookingId}/confirm`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(confirmRes.body.data.status).toBe('CONFIRMED');
+
+    // 5. Admin complete booking (COMPLETED)
+    const completeRes = await request(app.getHttpServer())
+      .patch(`/api/v1/bookings/${bookingId}/complete`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(completeRes.body.data.status).toBe('COMPLETED');
+
+    // 6. Verifikasi audit log (BookingStatusLog)
+    const logs = await prisma.bookingStatusLog.findMany({
+      where: { bookingId },
+      orderBy: { createdAt: 'asc' },
     });
-    expect(slotHold).not.toBeNull();
-    expect(slotHold?.customerId).toBe(seed.customer.id);
+
+    // PENDING, CONFIRMED, COMPLETED
+    expect(logs.length).toBe(3);
+    expect(logs[0].newStatus).toBe('PENDING');
+    expect(logs[1].newStatus).toBe('CONFIRMED');
+    expect(logs[2].newStatus).toBe('COMPLETED');
   });
 
   // ─── Flow 2: Tenant Data Isolation ──────────────────────────────────────────

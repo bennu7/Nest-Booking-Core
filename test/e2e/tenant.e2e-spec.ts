@@ -315,4 +315,106 @@ describe('Tenant (e2e)', () => {
       expect(res.body.code).toBe(400);
     });
   });
+
+  // ─── CANCELLATION POLICIES ────────────────────────────────────────────────
+
+  describe('CANCELLATION POLICIES', () => {
+    it('201 — ADMIN create cancellation policy berhasil', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/tenants/cancellation-policies')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          name: 'E2E Policy',
+          hoursBeforeFree: 12,
+          lateCancelCharge: 30,
+          noShowCharge: 80,
+          isDefault: true,
+        })
+        .expect(201);
+
+      expect(res.body.code).toBe(201);
+      expect(res.body.data.name).toBe('E2E Policy');
+      expect(res.body.data.isDefault).toBe(true);
+    });
+
+    it('200 — ADMIN list cancellation policies', async () => {
+      // Create one first
+      await request(app.getHttpServer())
+        .post('/api/v1/tenants/cancellation-policies')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: 'Policy A' });
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/tenants/cancellation-policies')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(res.body.code).toBe(200);
+      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data.length).toBeGreaterThan(0);
+    });
+
+    it('200 — ADMIN update cancellation policy', async () => {
+      const createRes = await request(app.getHttpServer())
+        .post('/api/v1/tenants/cancellation-policies')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: 'Update Me' });
+
+      const policyId = createRes.body.data.id;
+
+      const res = await request(app.getHttpServer())
+        .patch(`/api/v1/tenants/cancellation-policies/${policyId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: 'Updated Name', lateCancelCharge: 99 })
+        .expect(200);
+
+      expect(res.body.data.name).toBe('Updated Name');
+      expect(Number(res.body.data.lateCancelCharge)).toBe(99);
+    });
+
+    it('200 — ADMIN delete cancellation policy', async () => {
+      const createRes = await request(app.getHttpServer())
+        .post('/api/v1/tenants/cancellation-policies')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: 'Delete Me' });
+
+      const policyId = createRes.body.data.id;
+
+      await request(app.getHttpServer())
+        .delete(`/api/v1/tenants/cancellation-policies/${policyId}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      const listRes = await request(app.getHttpServer())
+        .get('/api/v1/tenants/cancellation-policies')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(
+        listRes.body.data.find((p: any) => p.id === policyId),
+      ).toBeUndefined();
+    });
+
+    it('403 — CUSTOMER tidak bisa create cancellation policy', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/tenants/cancellation-policies')
+        .set('Authorization', `Bearer ${customerToken}`)
+        .send({ name: 'Forbidden Policy' })
+        .expect(403);
+    });
+
+    it('400 — nama duplikat dalam satu tenant', async () => {
+      await request(app.getHttpServer())
+        .post('/api/v1/tenants/cancellation-policies')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: 'Duplicate Name' })
+        .expect(201);
+
+      await request(app.getHttpServer())
+        .post('/api/v1/tenants/cancellation-policies')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ name: 'Duplicate Name' })
+        .expect(400);
+    });
+  });
 });

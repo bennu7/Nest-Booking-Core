@@ -14,6 +14,7 @@ import {
   createSlotHoldDto,
   currentUserPayload,
   listBookingsQueryDto,
+  createBookingDto,
 } from '../fixtures/booking.fixture';
 
 describe('BookingController', () => {
@@ -21,6 +22,10 @@ describe('BookingController', () => {
   let bookingService: {
     findManyPaginated: jest.Mock;
     findOneOrThrow: jest.Mock;
+    createBooking: jest.Mock;
+    confirmBooking: jest.Mock;
+    cancelBooking: jest.Mock;
+    completeBooking: jest.Mock;
   };
   let slotService: {
     createHold: jest.Mock;
@@ -31,6 +36,10 @@ describe('BookingController', () => {
     bookingService = {
       findManyPaginated: jest.fn(),
       findOneOrThrow: jest.fn(),
+      createBooking: jest.fn(),
+      confirmBooking: jest.fn(),
+      cancelBooking: jest.fn(),
+      completeBooking: jest.fn(),
     };
     slotService = {
       createHold: jest.fn(),
@@ -158,6 +167,82 @@ describe('BookingController', () => {
         controller.cleanupExpiredHolds(user, cleanupExpiredHoldsQueryDto()),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(slotService.deleteExpiredHolds).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('create', () => {
+    it('returns ApiResponse CREATED with booking result', async () => {
+      const user = currentUserPayload();
+      const dto = createBookingDto();
+      const booking = { id: BOOKING_ID, status: 'PENDING' };
+      bookingService.createBooking.mockResolvedValue(booking);
+
+      const res = await controller.create(user, dto);
+
+      expect(bookingService.createBooking).toHaveBeenCalledWith(user, dto);
+      expect(res.code).toBe(HttpStatus.CREATED);
+      expect(res.message).toBe('Booking created successfully');
+      expect(res.data).toEqual(booking);
+    });
+  });
+
+  describe('confirm', () => {
+    it('returns ApiResponse OK with confirmed booking', async () => {
+      const user = currentUserPayload({ role: UserRole.ADMIN });
+      const booking = { id: BOOKING_ID, status: 'CONFIRMED' };
+      bookingService.confirmBooking.mockResolvedValue(booking);
+
+      const res = await controller.confirm(user, BOOKING_ID, {
+        reason: 'Confirmed',
+      });
+
+      expect(bookingService.confirmBooking).toHaveBeenCalledWith(
+        user,
+        BOOKING_ID,
+        { reason: 'Confirmed' },
+      );
+      expect(res.code).toBe(HttpStatus.OK);
+      expect(res.message).toBe('Booking confirmed successfully');
+      expect(res.data).toEqual(booking);
+    });
+  });
+
+  describe('cancel', () => {
+    it('returns ApiResponse OK with cancelled booking', async () => {
+      const user = currentUserPayload();
+      const booking = { id: BOOKING_ID, status: 'CANCELLED' };
+      bookingService.cancelBooking.mockResolvedValue(booking);
+
+      const res = await controller.cancel(user, BOOKING_ID, {
+        reason: 'Change of plan',
+      });
+
+      expect(bookingService.cancelBooking).toHaveBeenCalledWith(
+        user,
+        BOOKING_ID,
+        { reason: 'Change of plan' },
+      );
+      expect(res.code).toBe(HttpStatus.OK);
+      expect(res.message).toBe('Booking cancelled successfully');
+      expect(res.data).toEqual(booking);
+    });
+  });
+
+  describe('complete', () => {
+    it('returns ApiResponse OK with completed booking', async () => {
+      const user = currentUserPayload({ role: UserRole.ADMIN });
+      const booking = { id: BOOKING_ID, status: 'COMPLETED' };
+      bookingService.completeBooking.mockResolvedValue(booking);
+
+      const res = await controller.complete(user, BOOKING_ID);
+
+      expect(bookingService.completeBooking).toHaveBeenCalledWith(
+        user,
+        BOOKING_ID,
+      );
+      expect(res.code).toBe(HttpStatus.OK);
+      expect(res.message).toBe('Booking completed successfully');
+      expect(res.data).toEqual(booking);
     });
   });
 });

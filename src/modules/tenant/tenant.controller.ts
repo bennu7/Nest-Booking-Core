@@ -16,6 +16,8 @@ import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { ToggleStatusDto } from './dto/toggle-status.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { CreateCancellationPolicyDto } from './dto/create-cancellation-policy.dto';
+import { UpdateCancellationPolicyDto } from './dto/update-cancellation-policy.dto';
 import { ApiResponse } from 'src/common/dto/api-response.dto';
 import { PaginationQueryDto } from 'src/common/dto/pagination.dto';
 import { Roles } from 'src/common/decorators/roles.decorator';
@@ -99,6 +101,90 @@ export class TenantController {
     return new ApiResponse({
       code: HttpStatus.OK,
       message: 'Category deleted successfully',
+      data: result,
+    });
+  }
+
+  // ==================== CANCELLATION POLICIES ====================
+
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Post('cancellation-policies')
+  async createCancellationPolicy(
+    @Body() dto: CreateCancellationPolicyDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    if (!user.tenantId) {
+      throw new BadRequestException('User does not belong to any tenant');
+    }
+    const result = await this.tenantService.createCancellationPolicy(
+      user.tenantId,
+      dto,
+    );
+
+    return new ApiResponse({
+      code: HttpStatus.CREATED,
+      message: 'Cancellation policy created successfully',
+      data: result,
+    });
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Get('cancellation-policies')
+  async getCancellationPolicies(@CurrentUser() user: CurrentUserPayload) {
+    if (!user.tenantId) {
+      throw new BadRequestException('User does not belong to any tenant');
+    }
+    const result = await this.tenantService.findCancellationPolicies(
+      user.tenantId,
+    );
+
+    return new ApiResponse({
+      code: HttpStatus.OK,
+      message: 'Success',
+      data: result,
+    });
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Patch('cancellation-policies/:id')
+  async updateCancellationPolicy(
+    @Param('id') id: string,
+    @Body() dto: UpdateCancellationPolicyDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    if (!user.tenantId) {
+      throw new BadRequestException('User does not belong to any tenant');
+    }
+    const result = await this.tenantService.updateCancellationPolicy(
+      id,
+      user.tenantId,
+      dto,
+    );
+
+    return new ApiResponse({
+      code: HttpStatus.OK,
+      message: 'Cancellation policy updated successfully',
+      data: result,
+    });
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @Delete('cancellation-policies/:id')
+  async deleteCancellationPolicy(
+    @Param('id') id: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    if (!user.tenantId) {
+      throw new BadRequestException('User does not belong to any tenant');
+    }
+    const result = await this.tenantService.deleteCancellationPolicy(
+      id,
+      user.tenantId,
+    );
+
+    return new ApiResponse({
+      code: HttpStatus.OK,
+      message: 'Cancellation policy deleted successfully',
       data: result,
     });
   }
