@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
@@ -20,6 +21,7 @@ import {
   UpdateServiceDto,
   UpdateScheduleDto,
   CreateBreakDto,
+  GetAvailabilityDto,
 } from './dto';
 import { ApiResponse } from 'src/common/dto/api-response.dto';
 import { Roles } from 'src/common/decorators/roles.decorator';
@@ -299,6 +301,35 @@ export class ProviderController {
     return new ApiResponse({
       code: HttpStatus.OK,
       message: 'Break deleted successfully',
+    });
+  }
+
+  // ==================== AVAILABILITY ====================
+
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.ADMIN,
+    UserRole.PROVIDER,
+    UserRole.CUSTOMER,
+  )
+  @Get(':id/availability')
+  async getAvailability(
+    @Param('id') providerId: string,
+    @Query() query: GetAvailabilityDto,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    const tenantId = this.requireTenantContext(user);
+
+    const result = await this.providerService.getAvailability(
+      providerId,
+      query,
+      tenantId,
+    );
+
+    return new ApiResponse({
+      code: HttpStatus.OK,
+      message: 'Success',
+      data: result,
     });
   }
 }

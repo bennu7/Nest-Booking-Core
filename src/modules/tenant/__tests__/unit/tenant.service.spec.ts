@@ -12,6 +12,10 @@ import {
   makeTenant,
   updateCategoryDto,
   updateTenantDto,
+  POLICY_ID,
+  createCancellationPolicyDto,
+  updateCancellationPolicyDto,
+  makeCancellationPolicy,
 } from '../fixtures/tenant.fixture';
 
 function createPrismaMock() {
@@ -27,6 +31,18 @@ function createPrismaMock() {
       findFirst: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      findUnique: jest.fn(),
+      delete: jest.fn(),
+      findMany: jest.fn(),
+    },
+    cancellationPolicy: {
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+      delete: jest.fn(),
     },
   };
 }
@@ -304,6 +320,120 @@ describe('TenantService', () => {
           }),
         }),
       );
+    });
+  });
+
+  // ─── CancellationPolicy ───────────────────────────────────────────────────
+
+  describe('createCancellationPolicy', () => {
+    it('throws BadRequest when name already exists', async () => {
+      prisma.cancellationPolicy.findFirst.mockResolvedValue({ id: POLICY_ID });
+
+      await expect(
+        service.createCancellationPolicy(
+          TENANT_ID,
+          createCancellationPolicyDto(),
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('creates policy and unsets others if isDefault is true', async () => {
+      prisma.cancellationPolicy.findFirst.mockResolvedValue(null);
+      const policy = makeCancellationPolicy();
+      prisma.cancellationPolicy.create.mockResolvedValue(policy);
+
+      const result = await service.createCancellationPolicy(
+        TENANT_ID,
+        createCancellationPolicyDto({ isDefault: true }),
+      );
+
+      expect(prisma.cancellationPolicy.updateMany).toHaveBeenCalledWith({
+        where: { tenantId: TENANT_ID, isDefault: true },
+        data: { isDefault: false },
+      });
+      expect(prisma.cancellationPolicy.create).toHaveBeenCalled();
+      expect(result).toEqual(policy);
+    });
+  });
+
+  describe('findCancellationPolicies', () => {
+    it('returns all policies for tenant', async () => {
+      const policies = [makeCancellationPolicy()];
+      prisma.cancellationPolicy.findMany.mockResolvedValue(policies);
+
+      const result = await service.findCancellationPolicies(TENANT_ID);
+
+      expect(prisma.cancellationPolicy.findMany).toHaveBeenCalledWith({
+        where: { tenantId: TENANT_ID },
+        orderBy: { createdAt: 'asc' },
+      });
+      expect(result).toEqual(policies);
+    });
+  });
+
+  describe('updateCancellationPolicy', () => {
+    it('throws NotFound when policy missing or not owned', async () => {
+      prisma.cancellationPolicy.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.updateCancellationPolicy(
+          POLICY_ID,
+          TENANT_ID,
+          updateCancellationPolicyDto(),
+        ),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('updates policy and unsets others if isDefault set to true', async () => {
+      prisma.cancellationPolicy.findUnique.mockResolvedValue(
+        makeCancellationPolicy(),
+      );
+      prisma.cancellationPolicy.findFirst.mockResolvedValue(null);
+      const updated = makeCancellationPolicy({ name: 'Updated' });
+      prisma.cancellationPolicy.update.mockResolvedValue(updated);
+
+      const result = await service.updateCancellationPolicy(
+        POLICY_ID,
+        TENANT_ID,
+        { isDefault: true },
+      );
+
+      expect(prisma.cancellationPolicy.updateMany).toHaveBeenCalled();
+      expect(prisma.cancellationPolicy.update).toHaveBeenCalled();
+      expect(result).toEqual(updated);
+    });
+  });
+
+  describe('deleteCancellationPolicy', () => {
+    it('throws NotFound when missing', async () => {
+      prisma.cancellationPolicy.findUnique.mockResolvedValue(null);
+      await expect(
+        service.deleteCancellationPolicy(POLICY_ID, TENANT_ID),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('deletes policy', async () => {
+      prisma.cancellationPolicy.findUnique.mockResolvedValue(
+        makeCancellationPolicy(),
+      );
+      await service.deleteCancellationPolicy(POLICY_ID, TENANT_ID);
+      expect(prisma.cancellationPolicy.delete).toHaveBeenCalledWith({
+        where: { id: POLICY_ID },
+      });
+    });
+  });
+
+  describe('findDefaultCancellationPolicy', () => {
+    it('returns default policy', async () => {
+      const policy = makeCancellationPolicy({ isDefault: true });
+      prisma.cancellationPolicy.findFirst.mockResolvedValue(policy);
+
+      const result = await service.findDefaultCancellationPolicy(TENANT_ID);
+
+      expect(prisma.cancellationPolicy.findFirst).toHaveBeenCalledWith({
+        where: { tenantId: TENANT_ID, isDefault: true },
+      });
+      expect(result).toEqual(policy);
     });
   });
 });

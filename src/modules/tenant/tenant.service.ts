@@ -12,6 +12,8 @@ import { CreateTenantDto } from './dto/create-tenant.dto';
 import { UpdateTenantDto } from './dto/update-tenant.dto';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { CreateCancellationPolicyDto } from './dto/create-cancellation-policy.dto';
+import { UpdateCancellationPolicyDto } from './dto/update-cancellation-policy.dto';
 
 export interface ToggleTenantStatusParams {
   id: string;
@@ -211,6 +213,105 @@ export class TenantService {
         disabledAt: isActive ? null : new Date(),
         disabledBy: isActive ? null : (disabledBy ?? null),
       },
+    });
+  }
+
+  async createCancellationPolicy(
+    tenantId: string,
+    dto: CreateCancellationPolicyDto,
+  ) {
+    // Check name uniqueness within tenant
+    const existing = await this.prisma.cancellationPolicy.findFirst({
+      where: { tenantId, name: dto.name },
+    });
+
+    if (existing) {
+      throw new BadRequestException(
+        'Cancellation policy with this name already exists',
+      );
+    }
+
+    if (dto.isDefault) {
+      // Unset existing default
+      await this.prisma.cancellationPolicy.updateMany({
+        where: { tenantId, isDefault: true },
+        data: { isDefault: false },
+      });
+    }
+
+    return this.prisma.cancellationPolicy.create({
+      data: {
+        tenantId,
+        name: dto.name,
+        hoursBeforeFree: dto.hoursBeforeFree ?? 24,
+        lateCancelCharge: dto.lateCancelCharge ?? 50,
+        noShowCharge: dto.noShowCharge ?? 100,
+        isDefault: dto.isDefault ?? false,
+      },
+    });
+  }
+
+  async findCancellationPolicies(tenantId: string) {
+    return this.prisma.cancellationPolicy.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async updateCancellationPolicy(
+    id: string,
+    tenantId: string,
+    dto: UpdateCancellationPolicyDto,
+  ) {
+    const policy = await this.prisma.cancellationPolicy.findUnique({
+      where: { id },
+    });
+
+    if (!policy || policy.tenantId !== tenantId) {
+      throw new NotFoundException('Cancellation policy not found');
+    }
+
+    if (dto.name) {
+      const existing = await this.prisma.cancellationPolicy.findFirst({
+        where: { tenantId, name: dto.name, id: { not: id } },
+      });
+      if (existing) {
+        throw new BadRequestException(
+          'Cancellation policy with this name already exists',
+        );
+      }
+    }
+
+    if (dto.isDefault) {
+      await this.prisma.cancellationPolicy.updateMany({
+        where: { tenantId, isDefault: true },
+        data: { isDefault: false },
+      });
+    }
+
+    return this.prisma.cancellationPolicy.update({
+      where: { id },
+      data: dto,
+    });
+  }
+
+  async deleteCancellationPolicy(id: string, tenantId: string) {
+    const policy = await this.prisma.cancellationPolicy.findUnique({
+      where: { id },
+    });
+
+    if (!policy || policy.tenantId !== tenantId) {
+      throw new NotFoundException('Cancellation policy not found');
+    }
+
+    return this.prisma.cancellationPolicy.delete({
+      where: { id },
+    });
+  }
+
+  async findDefaultCancellationPolicy(tenantId: string) {
+    return this.prisma.cancellationPolicy.findFirst({
+      where: { tenantId, isDefault: true },
     });
   }
 }

@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -24,6 +25,8 @@ import {
   CleanupExpiredHoldsQueryDto,
   CreateSlotHoldDto,
   ListBookingsQueryDto,
+  CreateBookingDto,
+  UpdateBookingStatusDto,
 } from './dto';
 
 @Controller({ path: 'bookings', version: '1' })
@@ -119,6 +122,62 @@ export class BookingController {
     return new ApiResponse({
       code: HttpStatus.OK,
       message: 'Success',
+      data: result,
+    });
+  }
+
+  @Roles(UserRole.CUSTOMER)
+  @Post()
+  async create(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() dto: CreateBookingDto,
+  ) {
+    const result = await this.bookingService.createBooking(user, dto);
+    return new ApiResponse({
+      code: HttpStatus.CREATED,
+      message: 'Booking created successfully',
+      data: result,
+    });
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.PROVIDER)
+  @Patch(':id/confirm')
+  async confirm(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateBookingStatusDto,
+  ) {
+    const result = await this.bookingService.confirmBooking(user, id, dto);
+    return new ApiResponse({
+      code: HttpStatus.OK,
+      message: 'Booking confirmed successfully',
+      data: result,
+    });
+  }
+
+  @Patch(':id/cancel')
+  async cancel(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateBookingStatusDto,
+  ) {
+    const result = await this.bookingService.cancelBooking(user, id, dto);
+    return new ApiResponse({
+      code: HttpStatus.OK,
+      message: 'Booking cancelled successfully',
+      data: result,
+    });
+  }
+
+  @Patch(':id/complete')
+  async complete(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    const result = await this.bookingService.completeBooking(user, id);
+    return new ApiResponse({
+      code: HttpStatus.OK,
+      message: 'Booking completed successfully',
       data: result,
     });
   }

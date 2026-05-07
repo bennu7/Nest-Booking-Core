@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 
-import { UserRole } from '@generated/enums';
+import { UserRole, BookingStatus } from '@generated/enums';
 
 import { PrismaService } from 'src/prisma';
 
@@ -18,19 +18,41 @@ import {
   USER_PROVIDER,
   currentUserPayload,
   listBookingsQueryDto,
+  createBookingDto,
+  makeSlotHold,
+  makeBooking,
+  makeService,
 } from '../fixtures/booking.fixture';
 
 function createPrismaMock() {
-  return {
+  const mock = {
     booking: {
       findMany: jest.fn(),
       count: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+    },
+    slotHold: {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+    },
+    cancellationPolicy: {
+      findFirst: jest.fn(),
     },
     providerProfile: {
       findUnique: jest.fn(),
     },
+    service: {
+      findUnique: jest.fn(),
+    },
+    bookingStatusLog: {
+      create: jest.fn(),
+    },
+    $transaction: jest.fn((cb) => cb(mock)),
   };
+  return mock;
 }
 
 describe('BookingService', () => {
@@ -333,6 +355,235 @@ describe('BookingService', () => {
       );
 
       expect(out).toEqual(baseBooking);
+    });
+  });
+
+  describe('createBooking', () => {
+    it('throws Forbidden when user is not CUSTOMER', async () => {
+      await expect(
+        service.createBooking(
+          currentUserPayload({ role: UserRole.ADMIN }),
+          createBookingDto(),
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('throws NotFound when slotHold missing or converted', async () => {
+      prisma.slotHold.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.createBooking(currentUserPayload(), createBookingDto()),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('throws BadRequest when slotHold expired', async () => {
+      prisma.slotHold.findUnique.mockResolvedValue(
+        makeSlotHold({ expiresAt: new Date(Date.now() - 10000) }),
+      );
+
+      await expect(
+        service.createBooking(currentUserPayload(), createBookingDto()),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('throws BadRequest when there is a conflicting booking', async () => {
+      prisma.slotHold.findUnique.mockResolvedValue(makeSlotHold());
+      prisma.booking.findFirst.mockResolvedValue({ id: 'conflicting-id' });
+
+      await expect(
+        service.createBooking(currentUserPayload(), createBookingDto()),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('creates booking successfully within a transaction', async () => {
+      const slotHold = makeSlotHold();
+      const testService = makeService();
+      const expectedBooking = makeBooking();
+
+      prisma.slotHold.findUnique.mockResolvedValue(slotHold);
+      prisma.booking.findFirst.mockResolvedValue(null);
+      prisma.service.findUnique.mockResolvedValue(testService);
+      prisma.booking.create.mockResolvedValue(expectedBooking);
+
+      const res = await service.createBooking(
+        currentUserPayload(),
+        createBookingDto({ notes: 'My Notes' }),
+      );
+
+      expect(prisma.$transaction).toHaveBeenCalled();
+      expect(prisma.booking.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            customerId: USER_CUSTOMER,
+            providerId: slotHold.providerId,
+            serviceId: slotHold.serviceId,
+            notes: 'My Notes',
+          }),
+        }),
+      );
+      expect(prisma.slotHold.update).toHaveBeenCalledWith({
+        where: { id: slotHold.id },
+        data: { isConverted: true },
+      });
+      expect(prisma.bookingStatusLog.create).toHaveBeenCalled();
+      expect(res).toEqual(expectedBooking);
+    });
+  });
+
+  describe('confirmBooking', () => {
+    it('throws Forbidden when user is CUSTOMER', async () => {
+      prisma.booking.findUnique.mockResolvedValue(makeBooking());
+      await expect(
+        service.confirmBooking(
+          currentUserPayload({ role: UserRole.CUSTOMER }),
+          BOOKING_ID,
+          {},
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('throws BadRequest when status is not PENDING', async () => {
+      prisma.booking.findUnique.mockResolvedValue(
+        makeBooking({ status: BookingStatus.CONFIRMED }),
+      );
+
+      await expect(
+        service.confirmBooking(
+          currentUserPayload({ role: UserRole.ADMIN }),
+          BOOKING_ID,
+          {},
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('confirms booking successfully', async () => {
+      const booking = makeBooking({ status: BookingStatus.PENDING });
+      prisma.booking.findUnique.mockResolvedValue(booking);
+      prisma.booking.update.mockResolvedValue({
+        ...booking,
+        status: BookingStatus.CONFIRMED,
+      });
+
+      const res = await service.confirmBooking(
+        currentUserPayload({ role: UserRole.ADMIN }),
+        BOOKING_ID,
+        { reason: 'Looks good' },
+      );
+
+      expect(prisma.booking.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: BOOKING_ID },
+          data: expect.objectContaining({ status: BookingStatus.CONFIRMED }),
+        }),
+      );
+      expect(prisma.bookingStatusLog.create).toHaveBeenCalled();
+      expect(res.status).toBe(BookingStatus.CONFIRMED);
+    });
+  });
+
+  describe('cancelBooking', () => {
+    it('cancels booking successfully for CUSTOMER (free)', async () => {
+      const booking = makeBooking({
+        status: BookingStatus.PENDING,
+        startTime: new Date(Date.now() + 25 * 60 * 60 * 1000), // 25 jam lagi
+      });
+      prisma.booking.findUnique.mockResolvedValue(booking);
+      prisma.cancellationPolicy.findFirst.mockResolvedValue({
+        hoursBeforeFree: 24,
+        lateCancelCharge: 50000,
+      });
+      prisma.booking.update.mockResolvedValue({
+        ...booking,
+        status: BookingStatus.CANCELLED,
+      });
+
+      const res = await service.cancelBooking(
+        currentUserPayload({ role: UserRole.CUSTOMER }),
+        BOOKING_ID,
+        { reason: 'Change of plan' },
+      );
+
+      expect(res.status).toBe(BookingStatus.CANCELLED);
+      expect(prisma.bookingStatusLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            metadata: {},
+          }),
+        }),
+      );
+    });
+
+    it('cancels booking with late fee for CUSTOMER', async () => {
+      const booking = makeBooking({
+        status: BookingStatus.PENDING,
+        startTime: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 jam lagi
+      });
+      prisma.booking.findUnique.mockResolvedValue(booking);
+      prisma.cancellationPolicy.findFirst.mockResolvedValue({
+        hoursBeforeFree: 24,
+        lateCancelCharge: 50000,
+      });
+      prisma.booking.update.mockResolvedValue({
+        ...booking,
+        status: BookingStatus.CANCELLED,
+      });
+
+      const res = await service.cancelBooking(
+        currentUserPayload({ role: UserRole.CUSTOMER }),
+        BOOKING_ID,
+        { reason: 'Too late' },
+      );
+
+      expect(prisma.bookingStatusLog.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            metadata: { lateFee: 50000 },
+          }),
+        }),
+      );
+    });
+
+    it('throws BadRequest when booking already CANCELLED', async () => {
+      prisma.booking.findUnique.mockResolvedValue(
+        makeBooking({ status: BookingStatus.CANCELLED }),
+      );
+
+      await expect(
+        service.cancelBooking(
+          currentUserPayload({ role: UserRole.ADMIN }),
+          BOOKING_ID,
+          {},
+        ),
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+  });
+
+  describe('completeBooking', () => {
+    it('completes booking successfully for ADMIN', async () => {
+      const booking = makeBooking({ status: BookingStatus.CONFIRMED });
+      prisma.booking.findUnique.mockResolvedValue(booking);
+      prisma.booking.update.mockResolvedValue({
+        ...booking,
+        status: BookingStatus.COMPLETED,
+      });
+
+      const res = await service.completeBooking(
+        currentUserPayload({ role: UserRole.ADMIN }),
+        BOOKING_ID,
+      );
+
+      expect(res.status).toBe(BookingStatus.COMPLETED);
+    });
+
+    it('throws Forbidden when user is CUSTOMER', async () => {
+      prisma.booking.findUnique.mockResolvedValue(makeBooking());
+
+      await expect(
+        service.completeBooking(
+          currentUserPayload({ role: UserRole.CUSTOMER }),
+          BOOKING_ID,
+        ),
+      ).rejects.toBeInstanceOf(ForbiddenException);
     });
   });
 });

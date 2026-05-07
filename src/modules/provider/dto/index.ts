@@ -4,3 +4,4 @@ export { CreateServiceDto } from './create-service.dto';
 export { UpdateServiceDto } from './update-service.dto';
 export { UpdateScheduleDto, ScheduleDayDto } from './update-schedule.dto';
 export { CreateBreakDto } from './create-break.dto';
+export { GetAvailabilityDto } from './get-availability.dto';

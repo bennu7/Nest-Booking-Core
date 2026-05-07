@@ -4,7 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { UserRole } from '@generated/enums';
+import { UserRole, BookingStatus } from '@generated/enums';
+import { CreateBookingDto, UpdateBookingStatusDto } from './dto';
 
 import type { CurrentUserPayload } from 'src/common/decorators/current-user.decorator';
 import { getPaginationParams } from 'src/common/dto/pagination.dto';
@@ -148,5 +149,246 @@ export class BookingService {
     }
 
     return booking;
+  }
+
+  async createBooking(user: CurrentUserPayload, dto: CreateBookingDto) {
+    if (user.role !== UserRole.CUSTOMER) {
+      throw new ForbiddenException('Only customers can create bookings');
+    }
+
+    if (!user.tenantId) {
+      throw new BadRequestException('Tenant context is required');
+    }
+
+    // 2. Cari SlotHold
+    const slotHold = await this.prisma.slotHold.findUnique({
+      where: { id: dto.slotHoldId },
+    });
+
+    // 3. Validasi SlotHold
+    if (
+      !slotHold ||
+      slotHold.isConverted ||
+      slotHold.customerId !== user.id ||
+      slotHold.tenantId !== user.tenantId
+    ) {
+      throw new NotFoundException('Slot hold not found or already converted');
+    }
+
+    // 4. Cek expired
+    if (slotHold.expiresAt < new Date()) {
+      throw new BadRequestException('Slot hold has expired');
+    }
+
+    // 5. Periksa konflik booking
+    const conflict = await this.prisma.booking.findFirst({
+      where: {
+        providerId: slotHold.providerId,
+        status: { notIn: [BookingStatus.CANCELLED, BookingStatus.NO_SHOW] },
+        OR: [
+          {
+            startTime: { lt: slotHold.endTime },
+            endTime: { gt: slotHold.startTime },
+          },
+        ],
+      },
+    });
+
+    if (conflict) {
+      throw new BadRequestException('Time slot conflict with existing booking');
+    }
+
+    // 7. Fetch Service
+    const service = await this.prisma.service.findUnique({
+      where: { id: slotHold.serviceId },
+    });
+
+    if (!service) {
+      throw new NotFoundException('Service not found');
+    }
+
+    // 8. Transaction
+    const result = await this.prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.create({
+        data: {
+          tenantId: user.tenantId!,
+          customerId: user.id,
+          providerId: slotHold.providerId,
+          serviceId: slotHold.serviceId,
+          startTime: slotHold.startTime,
+          endTime: slotHold.endTime,
+          status: BookingStatus.PENDING,
+          totalPrice: service.price,
+          currency: service.currency,
+          notes: dto.notes,
+          version: 1,
+        },
+        include: bookingListInclude,
+      });
+
+      await tx.slotHold.update({
+        where: { id: slotHold.id },
+        data: { isConverted: true },
+      });
+
+      await tx.bookingStatusLog.create({
+        data: {
+          bookingId: booking.id,
+          previousStatus: null,
+          newStatus: BookingStatus.PENDING,
+          changedBy: user.id,
+        },
+      });
+
+      return booking;
+    });
+
+    return result;
+  }
+
+  async confirmBooking(
+    user: CurrentUserPayload,
+    id: string,
+    dto: UpdateBookingStatusDto,
+  ) {
+    const booking = await this.findOneOrThrow(user, id);
+
+    if (user.role === UserRole.CUSTOMER) {
+      throw new ForbiddenException('Customers cannot confirm bookings');
+    }
+
+    if (booking.status !== BookingStatus.PENDING) {
+      throw new BadRequestException('Booking is not in PENDING status');
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.booking.update({
+        where: { id },
+        data: {
+          status: BookingStatus.CONFIRMED,
+          version: { increment: 1 },
+        },
+      });
+
+      await tx.bookingStatusLog.create({
+        data: {
+          bookingId: id,
+          previousStatus: BookingStatus.PENDING,
+          newStatus: BookingStatus.CONFIRMED,
+          changedBy: user.id,
+          changeReason: dto.reason,
+        },
+      });
+
+      return updated;
+    });
+
+    return result;
+  }
+
+  async cancelBooking(
+    user: CurrentUserPayload,
+    id: string,
+    dto: UpdateBookingStatusDto,
+  ) {
+    const booking = await this.findOneOrThrow(user, id);
+
+    if (
+      booking.status === BookingStatus.CANCELLED ||
+      booking.status === BookingStatus.COMPLETED
+    ) {
+      throw new BadRequestException(
+        `Cannot cancel booking in ${booking.status} status`,
+      );
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      let lateFee = 0;
+
+      // Logic for CUSTOMER cancellation policy
+      if (user.role === UserRole.CUSTOMER) {
+        const policy = await tx.cancellationPolicy.findFirst({
+          where: { tenantId: user.tenantId as string, isDefault: true },
+        });
+
+        if (policy) {
+          const now = new Date();
+          const hoursDiff =
+            (booking.startTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+          if (hoursDiff < policy.hoursBeforeFree) {
+            lateFee = Number(policy.lateCancelCharge);
+          }
+        }
+      }
+
+      const updated = await tx.booking.update({
+        where: { id },
+        data: {
+          status: BookingStatus.CANCELLED,
+          cancelledBy: user.id,
+          cancelledAt: new Date(),
+          cancellationReason: dto.reason,
+          version: { increment: 1 },
+        },
+      });
+
+      await tx.bookingStatusLog.create({
+        data: {
+          bookingId: id,
+          previousStatus: booking.status,
+          newStatus: BookingStatus.CANCELLED,
+          changedBy: user.id,
+          changeReason: dto.reason,
+          metadata: lateFee > 0 ? { lateFee } : {},
+        },
+      });
+
+      return updated;
+    });
+
+    return result;
+  }
+
+  async completeBooking(user: CurrentUserPayload, id: string) {
+    const booking = await this.findOneOrThrow(user, id);
+
+    if (user.role === UserRole.CUSTOMER) {
+      throw new ForbiddenException('Customers cannot complete bookings');
+    }
+
+    const allowedStatuses: string[] = [
+      BookingStatus.CONFIRMED,
+      BookingStatus.IN_PROGRESS,
+    ];
+
+    if (!allowedStatuses.includes(booking.status)) {
+      throw new BadRequestException(
+        `Cannot complete booking in ${booking.status} status`,
+      );
+    }
+
+    const result = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.booking.update({
+        where: { id },
+        data: {
+          status: BookingStatus.COMPLETED,
+          version: { increment: 1 },
+        },
+      });
+
+      await tx.bookingStatusLog.create({
+        data: {
+          bookingId: id,
+          previousStatus: booking.status,
+          newStatus: BookingStatus.COMPLETED,
+          changedBy: user.id,
+        },
+      });
+
+      return updated;
+    });
+
+    return result;
   }
 }

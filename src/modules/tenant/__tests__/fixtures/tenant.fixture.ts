@@ -3,10 +3,13 @@ import { CreateTenantDto } from '../../dto/create-tenant.dto';
 import { ToggleStatusDto } from '../../dto/toggle-status.dto';
 import { UpdateCategoryDto } from '../../dto/update-category.dto';
 import { UpdateTenantDto } from '../../dto/update-tenant.dto';
+import { CreateCancellationPolicyDto } from '../../dto/create-cancellation-policy.dto';
+import { UpdateCancellationPolicyDto } from '../../dto/update-cancellation-policy.dto';
 
 export const TENANT_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 export const CATEGORY_ID = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 export const USER_ID = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+export const POLICY_ID = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
 
 export function createTenantDto(
   overrides: Partial<CreateTenantDto> = {},
@@ -77,6 +80,46 @@ export function makeTenant(overrides: Record<string, unknown> = {}) {
     disabledAt: null,
     disabledBy: null,
     settings: {},
+    createdAt: new Date('2024-01-01'),
+    updatedAt: new Date('2024-01-01'),
+    ...overrides,
+  };
+}
+
+export function createCancellationPolicyDto(
+  overrides: Partial<CreateCancellationPolicyDto> = {},
+): CreateCancellationPolicyDto {
+  return {
+    name: 'Standard Policy',
+    hoursBeforeFree: 24,
+    lateCancelCharge: 50,
+    noShowCharge: 100,
+    isDefault: true,
+    ...overrides,
+  };
+}
+
+export function updateCancellationPolicyDto(
+  overrides: Partial<UpdateCancellationPolicyDto> = {},
+): UpdateCancellationPolicyDto {
+  return {
+    name: 'Updated Policy',
+    lateCancelCharge: 75,
+    ...overrides,
+  };
+}
+
+export function makeCancellationPolicy(
+  overrides: Record<string, unknown> = {},
+) {
+  return {
+    id: POLICY_ID,
+    tenantId: TENANT_ID,
+    name: 'Standard Policy',
+    hoursBeforeFree: 24,
+    lateCancelCharge: 50,
+    noShowCharge: 100,
+    isDefault: true,
     createdAt: new Date('2024-01-01'),
     updatedAt: new Date('2024-01-01'),
     ...overrides,

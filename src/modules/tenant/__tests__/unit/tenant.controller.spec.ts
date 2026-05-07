@@ -13,6 +13,10 @@ import {
   makeTenant,
   toggleStatusDto,
   updateTenantDto,
+  POLICY_ID,
+  createCancellationPolicyDto,
+  updateCancellationPolicyDto,
+  makeCancellationPolicy,
 } from '../fixtures/tenant.fixture';
 
 describe('TenantController', () => {
@@ -24,6 +28,10 @@ describe('TenantController', () => {
     findOne: jest.Mock;
     toggleStatus: jest.Mock;
     update: jest.Mock;
+    createCancellationPolicy: jest.Mock;
+    findCancellationPolicies: jest.Mock;
+    updateCancellationPolicy: jest.Mock;
+    deleteCancellationPolicy: jest.Mock;
   };
 
   const superAdminUser = {
@@ -41,6 +49,10 @@ describe('TenantController', () => {
       findOne: jest.fn(),
       toggleStatus: jest.fn(),
       update: jest.fn(),
+      createCancellationPolicy: jest.fn(),
+      findCancellationPolicies: jest.fn(),
+      updateCancellationPolicy: jest.fn(),
+      deleteCancellationPolicy: jest.fn(),
     };
 
     const moduleRef: TestingModule = await Test.createTestingModule({
@@ -166,6 +178,82 @@ describe('TenantController', () => {
       expect(res.code).toBe(HttpStatus.OK);
       expect(res.message).toBe('Tenant updated successfully');
       expect(res.data).toEqual(updated);
+    });
+  });
+
+  // ─── CancellationPolicy ───────────────────────────────────────────────────
+
+  describe('createCancellationPolicy', () => {
+    it('returns ApiResponse CREATED with policy data', async () => {
+      const dto = createCancellationPolicyDto();
+      const policy = makeCancellationPolicy();
+      tenantService.createCancellationPolicy.mockResolvedValue(policy);
+
+      const user = { ...superAdminUser, tenantId: TENANT_ID };
+      const res = await controller.createCancellationPolicy(dto, user);
+
+      expect(tenantService.createCancellationPolicy).toHaveBeenCalledWith(
+        TENANT_ID,
+        dto,
+      );
+      expect(res.code).toBe(HttpStatus.CREATED);
+      expect(res.data).toEqual(policy);
+    });
+  });
+
+  describe('getCancellationPolicies', () => {
+    it('returns ApiResponse OK with policies', async () => {
+      const policies = [makeCancellationPolicy()];
+      tenantService.findCancellationPolicies.mockResolvedValue(policies);
+
+      const user = { ...superAdminUser, tenantId: TENANT_ID };
+      const res = await controller.getCancellationPolicies(user);
+
+      expect(tenantService.findCancellationPolicies).toHaveBeenCalledWith(
+        TENANT_ID,
+      );
+      expect(res.code).toBe(HttpStatus.OK);
+      expect(res.data).toEqual(policies);
+    });
+  });
+
+  describe('updateCancellationPolicy', () => {
+    it('returns ApiResponse OK with updated policy', async () => {
+      const dto = updateCancellationPolicyDto();
+      const updated = makeCancellationPolicy({ name: 'Updated' });
+      tenantService.updateCancellationPolicy.mockResolvedValue(updated);
+
+      const user = { ...superAdminUser, tenantId: TENANT_ID };
+      const res = await controller.updateCancellationPolicy(
+        POLICY_ID,
+        dto,
+        user,
+      );
+
+      expect(tenantService.updateCancellationPolicy).toHaveBeenCalledWith(
+        POLICY_ID,
+        TENANT_ID,
+        dto,
+      );
+      expect(res.code).toBe(HttpStatus.OK);
+      expect(res.data).toEqual(updated);
+    });
+  });
+
+  describe('deleteCancellationPolicy', () => {
+    it('returns ApiResponse OK with deleted policy', async () => {
+      const policy = makeCancellationPolicy();
+      tenantService.deleteCancellationPolicy.mockResolvedValue(policy);
+
+      const user = { ...superAdminUser, tenantId: TENANT_ID };
+      const res = await controller.deleteCancellationPolicy(POLICY_ID, user);
+
+      expect(tenantService.deleteCancellationPolicy).toHaveBeenCalledWith(
+        POLICY_ID,
+        TENANT_ID,
+      );
+      expect(res.code).toBe(HttpStatus.OK);
+      expect(res.data).toEqual(policy);
     });
   });
 });
