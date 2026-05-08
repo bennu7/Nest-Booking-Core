@@ -1,29 +1,29 @@
 // ============================================
 // Model: Payment
-// Deskripsi: Tracking Pembayaran
+// Deskripsi: Tracking Pembayaran (Phase 2b)
 // ============================================
 
 model Payment {
-  id            String        @id @default(uuid())
-  bookingId     String        @map("booking_id")
-  tenantId      String        @map("tenant_id")
-  amount        Decimal       @db.Decimal(12, 2)
-  currency      String        @default("IDR") @db.VarChar(3)
-  paymentMethod PaymentMethod @map("payment_method")
-  status        PaymentStatus @default(PENDING)
-  externalRef   String?       @map("external_ref") @db.VarChar(255)
-  paidAt        DateTime?     @map("paid_at")
-  refundedAt    DateTime?     @map("refunded_at")
-  refundAmount  Decimal?      @map("refund_amount") @db.Decimal(12, 2)
-  metadata      Json          @default("{}")
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
+  id                String        @id @default(uuid())
+  tenantId          String        @map("tenant_id")
+  bookingId         String        @unique @map("booking_id")
+  amount            Decimal       @map("amount") @db.Decimal(12, 2)
+  currency          String        @default("IDR") @map("currency") @db.VarChar(3)
+  status            PaymentStatus @default(PENDING) @map("status")
+  paymentMethod     String?       @map("payment_method")
+  externalPaymentId String?       @unique @map("external_payment_id") @db.VarChar(255)
+  paidAt            DateTime?     @map("paid_at")
+  refundedAt        DateTime?     @map("refunded_at")
+  metadata          Json          @default("{}") @map("metadata")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
 
   // Relations
-  booking Booking @relation(fields: [bookingId], references: [id])
-  tenant  Tenant  @relation(fields: [tenantId], references: [id])
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId])
   @@index([bookingId])
-  @@index([tenantId, status])
+  @@index([externalPaymentId])
   @@map("payments")
 }

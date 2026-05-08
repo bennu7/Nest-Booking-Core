@@ -29,7 +29,7 @@ model Booking {
   service         Service            @relation(fields: [serviceId], references: [id])
   cancelledByUser User?              @relation("CancelledBookings", fields: [cancelledBy], references: [id])
   statusLogs      BookingStatusLog[]
-  payments        Payment[]
+  payment         Payment?
   notifications   Notification[]
 
   @@index([tenantId])

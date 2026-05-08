@@ -13,6 +13,8 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { ProviderModule } from './modules/provider/provider.module';
 import { BookingModule } from './modules/booking/booking.module';
+import { PaymentModule } from './modules/payment/payment.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { BookingModule } from './modules/booking/booking.module';
     TenantModule,
     ProviderModule,
     BookingModule,
+    PaymentModule,
+    EventEmitterModule.forRoot(),
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

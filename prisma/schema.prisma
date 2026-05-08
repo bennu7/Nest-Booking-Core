@@ -42,6 +42,7 @@ enum PaymentStatus {
   SUCCESS
   FAILED
   REFUNDED
+  EXPIRED
 }
 
 enum PaymentMethod {
@@ -49,6 +50,7 @@ enum PaymentMethod {
   BANK_TRANSFER
   E_WALLET
   CREDIT_CARD
+  ONLINE
 }
 
 enum NotificationChannel {
