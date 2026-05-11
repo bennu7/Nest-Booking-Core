@@ -3,7 +3,8 @@ import {
   CreatePaymentParams,
   PaymentGateway,
   PaymentGatewayResponse,
-} from './payment-gateway.interface.js';
+  WebhookNotification,
+} from './payment-gateway.interface';
 
 @Injectable()
 export class MockPaymentGateway implements PaymentGateway {
@@ -26,5 +27,18 @@ export class MockPaymentGateway implements PaymentGateway {
 
   verifyWebhookSignature(_payload: string, _signature: string): boolean {
     return true; // Selalu valid di mock
+  }
+
+  async handleWebhookNotification(
+    notificationJson: Record<string, unknown>,
+  ): Promise<WebhookNotification> {
+    // Mock: langsung kembalikan payload sebagai-is (untuk testing)
+    return Promise.resolve({
+      orderId: notificationJson['order_id'] as string,
+      transactionStatus:
+        (notificationJson['transaction_status'] as string) ?? 'settlement',
+      fraudStatus: notificationJson['fraud_status'] as string | undefined,
+      paymentType: notificationJson['payment_type'] as string | undefined,
+    });
   }
 }

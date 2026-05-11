@@ -6,12 +6,12 @@ import {
   Inject,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { PrismaService } from '../../prisma/prisma.service.js';
-import type { PaymentGateway } from './gateways/payment-gateway.interface.js';
-import { PAYMENT_GATEWAY } from './gateways/payment-gateway.interface.js';
-import { PaymentStatus } from '../../generated/enums.js';
-import { shouldAllowRetry } from './utils/midtrans-status-mapper.util.js';
-import type { CurrentUserPayload } from '../../common/decorators/current-user.decorator.js';
+import { PrismaService } from 'src/prisma/prisma.service';
+import type { PaymentGateway } from './gateways/payment-gateway.interface';
+import { PAYMENT_GATEWAY } from './gateways/payment-gateway.interface';
+import { BookingStatus, PaymentStatus } from '@generated/enums';
+import { shouldAllowRetry } from './utils/midtrans-status-mapper.util';
+import type { CurrentUserPayload } from 'src/common/decorators/current-user.decorator.js';
 
 @Injectable()
 export class PaymentService {
@@ -147,13 +147,8 @@ export class PaymentService {
     status: PaymentStatus,
     metadata?: any,
   ) {
-    const payment = await this.findByExternalId(externalId);
-    if (!payment) {
-      throw new NotFoundException(
-        `Payment not found for externalId: ${externalId}`,
-      );
-    }
-
+    // Atomic update: use updateMany with externalPaymentId directly to avoid
+    // the non-atomic findFirst → update race condition (C2).
     const updateData: any = { status };
 
     if (status === PaymentStatus.SUCCESS) {
@@ -162,17 +157,35 @@ export class PaymentService {
       updateData.refundedAt = new Date();
     }
 
-    if (metadata) {
-      updateData.metadata = {
-        ...((payment.metadata as any) || {}),
-        ...metadata,
-      };
-    }
-
-    return this.prisma.payment.update({
-      where: { id: payment.id },
+    const result = await this.prisma.payment.updateMany({
+      where: { externalPaymentId: externalId },
       data: updateData,
     });
+
+    if (result.count === 0) {
+      throw new NotFoundException(
+        `Payment not found for externalId: ${externalId}`,
+      );
+    }
+
+    // Fetch updated record to return (and to merge metadata if needed)
+    const updated = await this.prisma.payment.findFirst({
+      where: { externalPaymentId: externalId },
+    });
+
+    if (metadata && updated) {
+      return this.prisma.payment.update({
+        where: { id: updated.id },
+        data: {
+          metadata: {
+            ...((updated.metadata as any) || {}),
+            ...metadata,
+          },
+        },
+      });
+    }
+
+    return updated;
   }
 
   async confirmBookingAfterPayment(externalId: string) {
@@ -185,7 +198,7 @@ export class PaymentService {
     // Update booking status to CONFIRMED
     await this.prisma.booking.update({
       where: { id: payment.bookingId },
-      data: { status: 'CONFIRMED' },
+      data: { status: BookingStatus.CONFIRMED },
     });
 
     // Emit event for notification or other side effects

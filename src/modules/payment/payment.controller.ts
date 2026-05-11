@@ -1,9 +1,9 @@
 import { Controller, Post, Get, Param, UseGuards, Query } from '@nestjs/common';
-import { PaymentService } from './payment.service.js';
-import type { CurrentUserPayload } from '../../common/decorators/current-user.decorator.js';
-import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
-import { Roles } from '../../common/decorators/roles.decorator.js';
-import { UserRole } from '../../generated/enums.js';
+import { PaymentService } from './payment.service';
+import type { CurrentUserPayload } from '../../common/decorators/current-user.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserRole } from '../../generated/enums';
 
 @Controller('payments')
 export class PaymentController {

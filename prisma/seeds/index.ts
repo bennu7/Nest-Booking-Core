@@ -34,4 +34,13 @@ export type {
 export { seedBooking } from './booking.seed.js';
 export type { SeedBookingParams, SeedBookingResult } from './booking.seed.js';
 
+export {
+  seedPayment,
+  seedPaymentSuccess,
+  seedPaymentFailed,
+  seedPaymentExpired,
+  seedPaymentRefunded,
+} from './payment.seed.js';
+export type { SeedPaymentParams, SeedPaymentResult } from './payment.seed.js';
+
 export const SEED_PASSWORD = 'Test1234!';

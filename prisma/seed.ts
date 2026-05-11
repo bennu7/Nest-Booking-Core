@@ -11,6 +11,10 @@ import {
   seedBreak,
   seedCancellationPolicy,
   seedBooking,
+  seedPayment,
+  seedPaymentSuccess,
+  seedPaymentFailed,
+  seedPaymentRefunded,
   SEED_PASSWORD,
 } from './seeds/index.js';
 
@@ -120,7 +124,7 @@ async function main() {
   const bookingEndTime = new Date(tomorrow);
   bookingEndTime.setHours(10, 0, 0, 0);
 
-  await seedBooking({
+  const booking = await seedBooking({
     prisma,
     tenantId: tenant.id,
     customerId: customer.id,
@@ -129,6 +133,33 @@ async function main() {
     startTime: tomorrow,
     endTime: bookingEndTime,
     totalPrice: service.price,
+  });
+
+  const failedBooking = await seedBooking({
+    prisma,
+    tenantId: tenant.id,
+    customerId: customer.id,
+    providerId: providerProfile.id,
+    serviceId: service.id,
+    startTime: new Date(Date.now() + 86400000 * 2),
+    endTime: new Date(Date.now() + 86400000 * 2 + 3600000),
+    totalPrice: service.price,
+  });
+
+  await seedPayment({
+    prisma,
+    tenantId: tenant.id,
+    bookingId: booking.id,
+    amount: service.price,
+    status: 'PENDING',
+    paymentMethod: 'credit_card',
+  });
+
+  await seedPaymentSuccess({
+    prisma,
+    tenantId: tenant.id,
+    bookingId: failedBooking.id,
+    amount: service.price,
   });
 
   console.log('\n📋 Seed Summary:');

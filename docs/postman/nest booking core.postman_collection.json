@@ -2105,6 +2105,860 @@
       ]
     },
     {
+      "name": "payment",
+      "item": [
+        {
+          "name": "create payment for booking",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/api/v1/payments/booking/:bookingId",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments",
+                "booking",
+                ":bookingId"
+              ],
+              "variable": [
+                {
+                  "key": "bookingId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "CUSTOMER, ADMIN, SUPER_ADMIN. Create payment for a PENDING booking. Returns redirect URL to payment gateway (Midtrans) and token."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{url}}/api/v1/payments/booking/:bookingId",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "payments",
+                    "booking",
+                    ":bookingId"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 201,\n    \"message\": \"Success\",\n    \"timestamp\": \"2026-05-10T10:00:00.000Z\",\n    \"data\": {\n        \"payment\": {\n            \"id\": \"payment-uuid\",\n            \"bookingId\": \"booking-uuid\",\n            \"tenantId\": \"tenant-uuid\",\n            \"amount\": 150000,\n            \"currency\": \"IDR\",\n            \"status\": \"PENDING\",\n            \"paymentMethod\": \"credit_card\",\n            \"externalPaymentId\": \"midtrans-order-123\",\n            \"paidAt\": null,\n            \"refundedAt\": null,\n            \"createdAt\": \"2026-05-10T10:00:00.000Z\",\n            \"updatedAt\": \"2026-05-10T10:00:00.000Z\"\n        },\n        \"redirectUrl\": \"https://app.midtrans.com/snap/v3/voucher/xxx\",\n        \"token\": \"midtrans-snap-token-xxx\"\n    }\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/v1/payments/booking/:bookingId",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "payments",
+                    "booking",
+                    ":bookingId"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 404,\n    \"message\": \"Booking not found or not eligible for payment\",\n    \"timestamp\": \"2026-05-10T10:00:00.000Z\",\n    \"error\": \"NotFoundException\"\n}"
+            },
+            {
+              "name": "403 Forbidden - Already Paid",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/v1/payments/booking/:bookingId",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "payments",
+                    "booking",
+                    ":bookingId"
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 403,\n    \"message\": \"Payment already successful for this booking\",\n    \"timestamp\": \"2026-05-10T10:00:00.000Z\",\n    \"error\": \"ForbiddenException\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "list payments",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/v1/payments?page=1&limit=20&status=PENDING",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (default: 1)"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Items per page (max 100)"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by status: PENDING, SUCCESS, FAILED, REFUNDED, EXPIRED",
+                  "disabled": true
+                },
+                {
+                  "key": "bookingId",
+                  "value": "",
+                  "description": "Filter by booking ID",
+                  "disabled": true
+                },
+                {
+                  "key": "tenantId",
+                  "value": "",
+                  "description": "Required for SUPER_ADMIN. Ignored for other roles.",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "ADMIN: all payments in tenant. PROVIDER: all payments. CUSTOMER: only own payments. SUPER_ADMIN: must pass tenantId."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/v1/payments?page=1&limit=20",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "payments"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 200,\n    \"message\": \"Success\",\n    \"timestamp\": \"2026-05-10T10:00:00.000Z\",\n    \"data\": {\n        \"items\": [\n            {\n                \"id\": \"payment-uuid\",\n                \"bookingId\": \"booking-uuid\",\n                \"tenantId\": \"tenant-uuid\",\n                \"amount\": 150000,\n                \"currency\": \"IDR\",\n                \"status\": \"SUCCESS\",\n                \"paymentMethod\": \"credit_card\",\n                \"externalPaymentId\": \"midtrans-order-123\",\n                \"paidAt\": \"2026-05-10T09:30:00.000Z\",\n                \"refundedAt\": null,\n                \"createdAt\": \"2026-05-10T09:00:00.000Z\",\n                \"updatedAt\": \"2026-05-10T09:30:00.000Z\"\n            }\n        ],\n        \"total\": 1,\n        \"page\": 1,\n        \"limit\": 20\n    }\n}"
+            }
+          ]
+        },
+        {
+          "name": "get payment by id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/v1/payments/:paymentId",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments",
+                ":paymentId"
+              ],
+              "variable": [
+                {
+                  "key": "paymentId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "ADMIN, SUPER_ADMIN, PROVIDER: all payments in tenant. CUSTOMER: only own payments (via booking)."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/v1/payments/:paymentId",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "payments",
+                    ":paymentId"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 200,\n    \"message\": \"Success\",\n    \"timestamp\": \"2026-05-10T10:00:00.000Z\",\n    \"data\": {\n        \"id\": \"payment-uuid\",\n        \"bookingId\": \"booking-uuid\",\n        \"tenantId\": \"tenant-uuid\",\n        \"amount\": 150000,\n        \"currency\": \"IDR\",\n        \"status\": \"SUCCESS\",\n        \"paymentMethod\": \"credit_card\",\n        \"externalPaymentId\": \"midtrans-order-123\",\n        \"paidAt\": \"2026-05-10T09:30:00.000Z\",\n        \"refundedAt\": null,\n        \"metadata\": {\n            \"gatewayResponse\": {\n                \"transaction_id\": \"midtrans-tx-123\",\n                \"transaction_status\": \"settlement\"\n            }\n        },\n        \"createdAt\": \"2026-05-10T09:00:00.000Z\",\n        \"updatedAt\": \"2026-05-10T09:30:00.000Z\"\n    }\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/v1/payments/:paymentId",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "payments",
+                    ":paymentId"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 404,\n    \"message\": \"Payment not found\",\n    \"timestamp\": \"2026-05-10T10:00:00.000Z\",\n    \"error\": \"NotFoundException\"\n}"
+            },
+            {
+              "name": "403 Forbidden",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/v1/payments/:paymentId",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "payments",
+                    ":paymentId"
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 403,\n    \"message\": \"Access denied\",\n    \"timestamp\": \"2026-05-10T10:00:00.000Z\",\n    \"error\": \"ForbiddenException\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "get payment by external id",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/api/v1/payments/external/:externalId",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments",
+                "external",
+                ":externalId"
+              ],
+              "variable": [
+                {
+                  "key": "externalId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "ADMIN, SUPER_ADMIN, PROVIDER only. Search payment by external payment ID (Midtrans order ID)."
+          },
+          "response": []
+        },
+        {
+          "name": "retry payment",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{url}}/api/v1/payments/:paymentId/retry",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments",
+                ":paymentId",
+                "retry"
+              ],
+              "variable": [
+                {
+                  "key": "paymentId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "CUSTOMER, ADMIN, SUPER_ADMIN. Retry a failed/expired payment. Only allowed for FAILED or EXPIRED status with retryable gateway status."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/v1/payments/:paymentId/retry",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "payments",
+                    ":paymentId",
+                    "retry"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 201,\n    \"message\": \"Success\",\n    \"timestamp\": \"2026-05-10T10:00:00.000Z\",\n    \"data\": {\n        \"payment\": {\n            \"id\": \"payment-uuid\",\n            \"bookingId\": \"booking-uuid\",\n            \"status\": \"PENDING\",\n            \"externalPaymentId\": \"midtrans-order-retry-456\"\n        },\n        \"redirectUrl\": \"https://app.midtrans.com/snap/v3/voucher/yyy\",\n        \"token\": \"midtrans-snap-token-yyy\"\n    }\n}"
+            },
+            {
+              "name": "400 Bad Request - Already Success",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/v1/payments/:paymentId/retry",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "payments",
+                    ":paymentId",
+                    "retry"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 400,\n    \"message\": \"Payment already successful\",\n    \"timestamp\": \"2026-05-10T10:00:00.000Z\",\n    \"error\": \"BadRequestException\"\n}"
+            },
+            {
+              "name": "403 Forbidden - Not Retryable",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/v1/payments/:paymentId/retry",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "payments",
+                    ":paymentId",
+                    "retry"
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 403,\n    \"message\": \"Payment retry not allowed for current status\",\n    \"timestamp\": \"2026-05-10T10:00:00.000Z\",\n    \"error\": \"ForbiddenException\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "refund payment",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"reason\": \"Customer requested refund\",\n    \"amount\": 150000\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/api/v1/payments/:paymentId/refund",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "payments",
+                ":paymentId",
+                "refund"
+              ],
+              "variable": [
+                {
+                  "key": "paymentId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "ADMIN, SUPER_ADMIN only. Refund a successful payment. Optional amount for partial refund."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"reason\": \"Customer requested refund\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/api/v1/payments/:paymentId/refund",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "payments",
+                    ":paymentId",
+                    "refund"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 200,\n    \"message\": \"Success\",\n    \"timestamp\": \"2026-05-10T10:00:00.000Z\",\n    \"data\": {\n        \"id\": \"payment-uuid\",\n        \"status\": \"REFUNDED\",\n        \"refundedAt\": \"2026-05-10T10:00:00.000Z\",\n        \"metadata\": {\n            \"refundReason\": \"Customer requested refund\",\n            \"refundAmount\": 150000,\n            \"refundId\": \"midtrans-refund-789\"\n        }\n    }\n}"
+            },
+            {
+              "name": "403 Forbidden",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/v1/payments/:paymentId/refund",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "payments",
+                    ":paymentId",
+                    "refund"
+                  ]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 403,\n    \"message\": \"Access denied. Admin or Super Admin only.\",\n    \"timestamp\": \"2026-05-10T10:00:00.000Z\",\n    \"error\": \"ForbiddenException\"\n}"
+            },
+            {
+              "name": "400 Bad Request - Not Refundable",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/v1/payments/:paymentId/refund",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "payments",
+                    ":paymentId",
+                    "refund"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"code\": 400,\n    \"message\": \"Payment cannot be refunded. Only SUCCESS payments can be refunded.\",\n    \"timestamp\": \"2026-05-10T10:00:00.000Z\",\n    \"error\": \"BadRequestException\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "webhooks",
+      "item": [
+        {
+          "name": "midtrans webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Callback-Token",
+                "value": "{{midtransCallbackToken}}",
+                "description": "Optional: Midtrans callback token for verification"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"order_id\": \"booking-uuid\",\n    \"transaction_status\": \"settlement\",\n    \"status_code\": \"200\",\n    \"status_message\": \"Success\",\n    \"transaction_id\": \"midtrans-tx-123456\",\n    \"payment_type\": \"credit_card\",\n    \"fraud_status\": \"accept\",\n    \"gross_amount\": \"150000.00\",\n    \"currency\": \"IDR\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/api/v1/webhooks/midtrans",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "webhooks",
+                "midtrans"
+              ]
+            },
+            "description": "Public endpoint. Receives payment status updates from Midtrans. Maps Midtrans status to internal PaymentStatus and updates booking status accordingly."
+          },
+          "response": [
+            {
+              "name": "200 OK - Processed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"order_id\": \"booking-uuid\",\n    \"transaction_status\": \"settlement\",\n    \"gross_amount\": \"150000.00\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/api/v1/webhooks/midtrans",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "webhooks",
+                    "midtrans"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"status\": \"processed\",\n    \"orderId\": \"booking-uuid\",\n    \"newStatus\": \"SUCCESS\"\n}"
+            },
+            {
+              "name": "200 OK - Already Processed",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}/api/v1/webhooks/midtrans",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "webhooks",
+                    "midtrans"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"status\": \"already_processed\",\n    \"orderId\": \"booking-uuid\"\n}"
+            },
+            {
+              "name": "400 Bad Request - Missing order_id",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"transaction_status\": \"settlement\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{url}}/api/v1/webhooks/midtrans",
+                  "host": [
+                    "{{url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "webhooks",
+                    "midtrans"
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n    \"statusCode\": 400,\n    \"message\": \"Missing order_id\",\n    \"error\": \"Bad Request\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "health",
       "item": [
         {

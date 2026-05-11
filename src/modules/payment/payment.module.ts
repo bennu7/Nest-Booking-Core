@@ -1,22 +1,20 @@
-import { Module, Global } from '@nestjs/common';
-import { PaymentService } from './payment.service.js';
-import { PaymentController } from './payment.controller.js';
-import { MidtransWebhookController } from './webhooks/payment-webhook.controller.js';
-import { PAYMENT_GATEWAY } from './gateways/payment-gateway.interface.js';
-import { MockPaymentGateway } from './gateways/mock-payment.gateway.js';
-import { MidtransPaymentGateway } from './gateways/midtrans-payment.gateway.js';
+import { Module } from '@nestjs/common';
+import { PaymentService } from './payment.service';
+import { PaymentController } from './payment.controller';
+import { MidtransWebhookController } from './webhooks/payment-webhook.controller';
+import { PAYMENT_GATEWAY } from './gateways/payment-gateway.interface';
+import { MockPaymentGateway } from './gateways/mock-payment.gateway';
+// import { MidtransPaymentGateway } from './gateways/midtrans-payment.gateway';
 
-@Global()
 @Module({
   controllers: [PaymentController, MidtransWebhookController],
   providers: [
     PaymentService,
-    MidtransPaymentGateway,
     {
       provide: PAYMENT_GATEWAY,
       useClass: MockPaymentGateway, // Toggle between Mock and Midtrans
     },
   ],
-  exports: [PaymentService, PAYMENT_GATEWAY],
+  exports: [PaymentService],
 })
 export class PaymentModule {}

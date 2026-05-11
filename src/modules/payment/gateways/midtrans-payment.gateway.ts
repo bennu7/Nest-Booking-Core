@@ -1,30 +1,46 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import * as crypto from 'crypto';
 import * as midtransClient from 'midtrans-client';
 import {
   CreatePaymentParams,
-  MidtransNotificationResponse,
   PaymentGateway,
   PaymentGatewayResponse,
-} from './payment-gateway.interface.js';
+  WebhookNotification,
+} from './payment-gateway.interface';
+import { MidtransNotificationResponse } from '../types/midtrans.types';
 
 @Injectable()
 export class MidtransPaymentGateway implements PaymentGateway {
   private readonly logger = new Logger(MidtransPaymentGateway.name);
   private readonly snap: any;
   private readonly core: any;
+  private readonly serverKey: string;
 
   constructor(private readonly configService: ConfigService) {
+    const serverKey = this.configService.get<string>('MIDTRANS_SERVER_KEY');
+    if (!serverKey) {
+      throw new Error(
+        'MIDTRANS_SERVER_KEY is not set. Cannot initialize payment gateway.',
+      );
+    }
+    this.serverKey = serverKey;
+
+    const isProduction =
+      this.configService.get('MIDTRANS_IS_PRODUCTION') === 'true';
+    const clientKey =
+      this.configService.get<string>('MIDTRANS_CLIENT_KEY') || '';
+
     this.snap = new midtransClient.Snap({
-      isProduction: this.configService.get('MIDTRANS_IS_PRODUCTION') === 'true',
-      serverKey: this.configService.get('MIDTRANS_SERVER_KEY') || '',
-      clientKey: this.configService.get('MIDTRANS_CLIENT_KEY') || '',
+      isProduction,
+      serverKey: this.serverKey,
+      clientKey,
     });
 
     this.core = new midtransClient.CoreApi({
-      isProduction: this.configService.get('MIDTRANS_IS_PRODUCTION') === 'true',
-      serverKey: this.configService.get('MIDTRANS_SERVER_KEY') || '',
-      clientKey: this.configService.get('MIDTRANS_CLIENT_KEY') || '',
+      isProduction,
+      serverKey: this.serverKey,
+      clientKey,
     });
   }
 
@@ -99,16 +115,16 @@ export class MidtransPaymentGateway implements PaymentGateway {
     amount?: number,
     reason?: string,
   ): Promise<boolean> {
+    const parameter: any = {
+      refund_key: `${orderId}-refund-${Date.now()}`,
+      reason: reason || 'Customer requested refund',
+    };
+
+    if (amount) {
+      parameter.amount = amount;
+    }
+
     try {
-      const parameter: any = {
-        refund_key: `${orderId}-refund-${Date.now()}`,
-        reason: reason || 'Customer requested refund',
-      };
-
-      if (amount) {
-        parameter.amount = amount;
-      }
-
       const response = await this.core.transaction.refund(orderId, parameter);
       this.logger.log(
         `Midtrans refund initiated for order ${orderId}: ${JSON.stringify(response)}`,
@@ -118,24 +134,59 @@ export class MidtransPaymentGateway implements PaymentGateway {
       this.logger.error(
         `Midtrans refundPayment error for order ${orderId}: ${error.message}`,
       );
-      return false;
+      // Throw so the caller knows the refund failed and can react accordingly
+      // (e.g. alert finance team, mark for manual review).
+      // Returning false would leave Payment.status as SUCCESS with no signal.
+      throw new PaymentGatewayException(
+        `Refund failed for order ${orderId}: ${error.message}`,
+        error.httpStatusCode,
+        error.ApiResponse,
+      );
     }
   }
 
   verifyWebhookSignature(payload: string, signature: string): boolean {
-    // Midtrans doesn't use a standard signature header like Stripe in Snap,
-    // it's verified by calling the status API or using the server key.
-    // However, the CoreApi notification handler does verification.
-    return true;
+    // Midtrans signature verification:
+    // SHA512(order_id + status_code + gross_amount + SERVER_KEY)
+    try {
+      const notification = JSON.parse(payload) as MidtransNotificationResponse;
+      const computed = crypto
+        .createHash('sha512')
+        .update(
+          `${notification.order_id}${notification.status_code}${notification.gross_amount}${this.serverKey}`,
+        )
+        .digest('hex');
+
+      const isValid = computed === signature;
+      if (!isValid) {
+        this.logger.warn(
+          `Invalid webhook signature for order: ${notification.order_id}`,
+        );
+      }
+      return isValid;
+    } catch (error) {
+      this.logger.error(
+        `Webhook signature verification error: ${error.message}`,
+      );
+      return false;
+    }
   }
 
   async handleWebhookNotification(
-    notificationJson: any,
-  ): Promise<MidtransNotificationResponse> {
+    notificationJson: Record<string, unknown>,
+  ): Promise<WebhookNotification> {
     try {
-      const response =
-        await this.core.transaction.notification(notificationJson);
-      return response as MidtransNotificationResponse;
+      // Midtrans CoreApi re-verifies the transaction status server-side
+      const response = (await this.core.transaction.notification(
+        notificationJson,
+      )) as MidtransNotificationResponse;
+
+      return {
+        orderId: response.order_id,
+        transactionStatus: response.transaction_status,
+        fraudStatus: response.fraud_status,
+        paymentType: response.payment_type,
+      };
     } catch (error) {
       this.logger.error(
         `Webhook notification handling error: ${error.message}`,

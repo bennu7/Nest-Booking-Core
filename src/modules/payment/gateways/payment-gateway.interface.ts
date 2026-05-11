@@ -28,19 +28,6 @@ export interface WebhookNotification {
   paymentType?: string;
 }
 
-export interface MidtransNotificationResponse {
-  order_id: string;
-  transaction_status: string;
-  status_code?: string;
-  status_message?: string;
-  fraud_status?: string;
-  payment_type?: string;
-  gross_amount?: string;
-  currency?: string;
-  signature_key?: string;
-  [key: string]: unknown;
-}
-
 export interface PaymentGateway {
   createPayment(params: CreatePaymentParams): Promise<PaymentGatewayResponse>;
   confirmPayment(orderId: string): Promise<boolean>;
@@ -50,6 +37,9 @@ export interface PaymentGateway {
     reason?: string,
   ): Promise<boolean>;
   verifyWebhookSignature(payload: string, signature: string): boolean;
+  handleWebhookNotification(
+    notificationJson: Record<string, unknown>,
+  ): Promise<WebhookNotification>;
 }
 
 export const PAYMENT_GATEWAY = Symbol('PAYMENT_GATEWAY');

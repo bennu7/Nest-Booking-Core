@@ -1,4 +1,4 @@
-import { PaymentStatus } from '../../../generated/enums.js';
+import { PaymentStatus } from '@generated/enums';
 
 export enum MidtransTransactionStatus {
   CAPTURE = 'capture',
