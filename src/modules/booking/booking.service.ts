@@ -2,8 +2,10 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { UserRole, BookingStatus } from '@generated/enums';
 import { CreateBookingDto, UpdateBookingStatusDto } from './dto';
 
@@ -25,7 +27,12 @@ const bookingListInclude = {
 
 @Injectable()
 export class BookingService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(BookingService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   private resolveTenantId(
     user: CurrentUserPayload,
@@ -242,6 +249,20 @@ export class BookingService {
 
       return booking;
     });
+
+    // [W7] Emit event setelah booking berhasil dibuat.
+    // PaymentService subscribe ke event ini untuk auto-create Payment record.
+    // Pakai EventEmitter (bukan direct call) untuk menghindari circular dependency.
+    this.eventEmitter.emit('booking.created', {
+      bookingId: result.id,
+      tenantId: result.tenantId,
+      customerId: result.customerId,
+      amount: result.totalPrice,
+      currency: result.currency,
+      customerEmail: user.email,
+    });
+
+    this.logger.log(`Booking created: ${result.id}, event emitted`);
 
     return result;
   }

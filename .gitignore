@@ -2,7 +2,7 @@ node_modules/
 src/generated
 dist/
 
-.env
+# .env
 .env.test
 .DS_Store
 
@@ -12,5 +12,5 @@ booking_engine_schema.md
 HANDOFF.md
 .qwen/PROJECT_SUMMARY.md
 .scannerwork
-ISSUES.md
-PLAN.md
+# ISSUES.md
+# PLAN.md

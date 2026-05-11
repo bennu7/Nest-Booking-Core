@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 import { UserRole, BookingStatus } from '@generated/enums';
 
@@ -63,7 +64,11 @@ describe('BookingService', () => {
     prisma = createPrismaMock();
 
     const moduleRef: TestingModule = await Test.createTestingModule({
-      providers: [BookingService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        BookingService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
+      ],
     }).compile();
 
     service = moduleRef.get(BookingService);

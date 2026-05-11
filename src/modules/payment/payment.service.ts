@@ -1,17 +1,28 @@
 import {
+  BadRequestException,
   Injectable,
   Logger,
   NotFoundException,
   ForbiddenException,
   Inject,
 } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from 'src/prisma/prisma.service';
 import type { PaymentGateway } from './gateways/payment-gateway.interface';
 import { PAYMENT_GATEWAY } from './gateways/payment-gateway.interface';
 import { BookingStatus, PaymentStatus } from '@generated/enums';
 import { shouldAllowRetry } from './utils/midtrans-status-mapper.util';
-import type { CurrentUserPayload } from 'src/common/decorators/current-user.decorator.js';
+import type { CurrentUserPayload } from 'src/common/decorators/current-user.decorator';
+
+export interface BookingCreatedEvent {
+  bookingId: string;
+  tenantId: string;
+  customerId: string;
+  amount: any;
+  currency: string;
+  customerEmail: string;
+}
 
 @Injectable()
 export class PaymentService {
@@ -132,13 +143,11 @@ export class PaymentService {
   }
 
   async findByExternalId(externalId: string) {
+    // Lookup hanya via externalPaymentId — canonical field untuk Midtrans order_id.
+    // OR dengan bookingId dihapus karena keduanya selalu sama nilai (fragile W6).
     return this.prisma.payment.findFirst({
-      where: {
-        OR: [{ externalPaymentId: externalId }, { bookingId: externalId }],
-      },
-      include: {
-        booking: true,
-      },
+      where: { externalPaymentId: externalId },
+      include: { booking: true },
     });
   }
 
@@ -216,6 +225,7 @@ export class PaymentService {
   async retryPayment(paymentId: string, user: CurrentUserPayload) {
     const payment = await this.prisma.payment.findUnique({
       where: { id: paymentId },
+      include: { booking: true },
     });
 
     if (!payment) {
@@ -226,12 +236,12 @@ export class PaymentService {
       throw new ForbiddenException('Access denied');
     }
 
-    const metadata = (payment.metadata as any) || {};
-    const lastStatus = metadata.gatewayResponse?.transactionStatus;
-
     if (payment.status === PaymentStatus.SUCCESS) {
       throw new ForbiddenException('Payment already successful');
     }
+
+    const metadata = (payment.metadata as any) || {};
+    const lastStatus = metadata?.gatewayResponse?.transactionStatus;
 
     if (!shouldAllowRetry(lastStatus)) {
       throw new ForbiddenException(
@@ -239,6 +249,87 @@ export class PaymentService {
       );
     }
 
+    // [W5] Validasi status booking secara eksplisit sebelum retry.
+    // Tanpa ini, createPayment akan throw NotFoundException dengan pesan
+    // "Booking not found or not eligible" — menyesatkan karena booking-nya ada.
+    if (payment.booking.status !== BookingStatus.PENDING) {
+      throw new BadRequestException(
+        `Cannot retry payment: booking is already ${payment.booking.status}`,
+      );
+    }
+
     return this.createPayment(payment.bookingId, user);
+  }
+
+  // [W7] Subscribe ke event 'booking.created' yang di-emit oleh BookingService.
+  // Dengan pattern ini BookingModule tidak perlu import PaymentModule sama sekali
+  // — tidak ada circular dependency.
+  @OnEvent('booking.created')
+  async handleBookingCreated(payload: BookingCreatedEvent): Promise<void> {
+    await this.createPaymentFromEvent(payload);
+  }
+
+  private async createPaymentFromEvent(
+    payload: BookingCreatedEvent,
+  ): Promise<void> {
+    try {
+      // Cek apakah payment sudah ada (idempotency — kalau event ter-emit 2x)
+      const existing = await this.prisma.payment.findUnique({
+        where: { bookingId: payload.bookingId },
+      });
+
+      if (existing) {
+        this.logger.warn(
+          `Payment already exists for booking ${payload.bookingId}, skipping auto-create`,
+        );
+        return;
+      }
+
+      // Buat Payment record PENDING
+      const payment = await this.prisma.payment.create({
+        data: {
+          bookingId: payload.bookingId,
+          tenantId: payload.tenantId,
+          amount: payload.amount,
+          currency: payload.currency ?? 'IDR',
+          status: PaymentStatus.PENDING,
+        },
+      });
+
+      // Hit gateway untuk mendapatkan snap token / redirect URL
+      const gatewayResponse = await this.gateway.createPayment({
+        orderId: payload.bookingId,
+        amount: Number(payload.amount),
+        currency: payload.currency ?? 'IDR',
+        customerEmail: payload.customerEmail,
+        metadata: { paymentId: payment.id, tenantId: payload.tenantId },
+      });
+
+      // Simpan externalPaymentId dari response gateway
+      await this.prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          externalPaymentId: gatewayResponse.externalId,
+          metadata: { gatewayResponse } as any,
+        },
+      });
+
+      this.logger.log(
+        `Auto-created payment ${payment.id} for booking ${payload.bookingId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to auto-create payment for booking ${payload.bookingId}: ${error.message}`,
+      );
+
+      // [W7 error handling] Emit payment.failed agar NotificationService bisa
+      // kirim notifikasi ke customer bahwa payment perlu dibuat ulang secara manual.
+      this.eventEmitter.emit('payment.failed', {
+        bookingId: payload.bookingId,
+        tenantId: payload.tenantId,
+        customerId: payload.customerId,
+        reason: error.message,
+      });
+    }
   }
 }
